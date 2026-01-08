@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import user_routes
+from routes import user_routes, addmeal
 import uvicorn
 
 app = FastAPI(title="Healthplate API")
@@ -23,6 +23,7 @@ app.add_middleware(
 
 # Connect the modular routes
 app.include_router(user_routes.router)
+app.include_router(addmeal.router)
 
 @app.get("/")
 async def root():

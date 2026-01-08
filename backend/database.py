@@ -4,3 +4,4 @@ from config import settings
 client = AsyncIOMotorClient(settings.MONGO_URL)
 db = client.foodlens
 users_collection = db.get_collection("users")
+addmeal_collection = db.get_collection("dailymeal")

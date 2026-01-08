@@ -45,10 +45,13 @@ async def login(credentials: UserLoginSchema):
 
     token = create_access_token({"sub": user["email"]})
 
+    # Remove sensitive fields like password
+    user_data = {
+        key: value for key, value in user.items() if key != "password" and key != "_id"
+    }
+
     return {
         "token": token,
-        "user": {
-            "email": user["email"],
-            "name": user["name"]
-        }
+        "user": user_data
     }
+

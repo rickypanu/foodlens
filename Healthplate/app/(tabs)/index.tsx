@@ -1,11 +1,21 @@
 import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { useAuth } from "../../src/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const { userData } = useAuth();
-
+  const navigation = useNavigation();
+  const router = useRouter();
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -13,7 +23,12 @@ export default function HomeScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("../subscribe")} // your screen name
+      >
+        <Text style={styles.subscriptionLink}>Buy Subscription</Text>
+      </TouchableOpacity>
       {/* HEADER */}
       <View style={styles.header}>
         {/* Logo */}
@@ -54,6 +69,17 @@ export default function HomeScreen() {
         <Text style={styles.statusText}>Keep up the good work!</Text>
       </View>
 
+      <View style={styles.statusCard}>
+      {/* Add Meal Button */}
+      <TouchableOpacity
+        style={styles.addMealButton}
+        onPress={() => router.push('/add')} // navigate to add tab
+      >
+        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+        <Text style={styles.addMealText}>Add Meal</Text>
+      </TouchableOpacity>
+    </View>
+
       {/* STATS */}
       <View style={styles.statsRow}>
         <View style={styles.darkCard}>
@@ -75,7 +101,7 @@ export default function HomeScreen() {
         <Text style={styles.cardValueDark}>0g</Text>
         <Text style={styles.cardSub}>/ 109g target</Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -85,6 +111,28 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 20,
     paddingTop: 60,
+  },
+  subscriptionLink: {
+    color: "#1E90FF",
+    fontWeight: "600",
+    marginTop: 10,
+    textDecorationLine: "underline",
+  },
+  addMealButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4CAF50",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginTop: 12,
+  },
+
+  addMealText: {
+    color: "#fff",
+    fontWeight: "600",
+    marginLeft: 8,
   },
 
   header: {
