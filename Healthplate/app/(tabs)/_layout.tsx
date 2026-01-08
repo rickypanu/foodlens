@@ -4,8 +4,7 @@ import { Platform } from 'react-native';
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#4CAF50' }}>
-      
+   <Tabs screenOptions={{ tabBarActiveTintColor: '#4CAF50', headerShown: false }}>
       <Tabs.Screen
         name="index"
         options={{
