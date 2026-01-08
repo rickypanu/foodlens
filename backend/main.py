@@ -5,11 +5,17 @@ import uvicorn
 
 app = FastAPI(title="Healthplate API")
 
+origins = [
+    "*", # Allow all origins (for development only)
+    "http://localhost:8081", # Expo web default
+    "http://192.168.136.55:8081",
+]
+
 # --- CORS Configuration ---
 # Allow all origins for development. In production, replace ["*"] with specific app URLs.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"], 
     allow_headers=["*"],

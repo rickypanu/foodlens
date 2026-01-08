@@ -42,6 +42,13 @@ async def login(credentials: UserLoginSchema):
     user = await users_collection.find_one({"email": credentials.email})
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    
+
     token = create_access_token({"sub": user["email"]})
-    return {"token": token, "userName": user["name"]}
+
+    return {
+        "token": token,
+        "user": {
+            "email": user["email"],
+            "name": user["name"]
+        }
+    }
