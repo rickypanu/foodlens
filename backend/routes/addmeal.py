@@ -57,22 +57,29 @@ async def add_meal(meal: Meal):
         # Prepare meal document
         meal_doc = {
             "user_id": user_id,
+            "email":meal.email,
             "date": meal.date.isoformat(),
             "meal_type": meal.meal_type,
             "source_type": meal.source_type,
             "oil_level": meal.oil_level,
-            "components": [c.dict() for c in meal.components],
-            "nutrition": meal.nutrition.dict() if meal.nutrition else {},
+            "components": [c.model_dump() for c in meal.components],
+            "nutrition": meal.nutrition.model_dump() if meal.nutrition else None,
             "confidence_score": meal.confidence_score,
             "created_at": datetime.utcnow()
         }
 
         # Insert meal
         result = await addmeal_collection.insert_one(meal_doc)
+        
+        # Convert Mongo Objects to strings so FastAPI can return them as JSON
         meal_doc["_id"] = str(result.inserted_id)
+        meal_doc["user_id"] = str(meal_doc["user_id"])  # <--- ADD THIS LINE
 
         return {"success": True, "meal": meal_doc}
 
     except Exception as e:
+        # It is helpful to print the FULL error to see what's wrong
+        import traceback
+        traceback.print_exc() 
         print("Error saving meal:", e)
-        raise HTTPException(status_code=500, detail="Failed to save meal")
+        raise HTTPException(status_code=500, detail=str(e)) # Return the actual error message for debugging
