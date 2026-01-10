@@ -1,283 +1,426 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
-import { BarChart, PieChart } from "react-native-gifted-charts";
-import { Flame, Beef, Wheat, Droplets, TrendingUp, ChevronRight, Activity, Calendar } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  StyleSheet,
+  Platform
+} from 'react-native';
+import { LineChart } from "react-native-gifted-charts";
+import {
+  Calendar as CalendarIcon,
+  ChevronDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Flame,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const screenWidth = Dimensions.get('window').width;
 
-// --- Mock Data ---
-const barData = [
-  { value: 2100, label: 'M', frontColor: '#6366f1', gradientColor: '#818cf8', spacing: 20 },
-  { value: 1950, label: 'T', frontColor: '#6366f1', gradientColor: '#818cf8', spacing: 20 },
-  { value: 2400, label: 'W', frontColor: '#6366f1', gradientColor: '#818cf8', spacing: 20 },
-  { value: 1800, label: 'T', frontColor: '#c7d2fe', gradientColor: '#e0e7ff', spacing: 20 }, // Low day
-  { value: 2200, label: 'F', frontColor: '#6366f1', gradientColor: '#818cf8', spacing: 20 },
-  { value: 2600, label: 'S', frontColor: '#4f46e5', gradientColor: '#4338ca', spacing: 20 }, // High day
-  { value: 2050, label: 'S', frontColor: '#6366f1', gradientColor: '#818cf8', spacing: 20 },
+/* ---------------- Mock Data ---------------- */
+const lineData = [
+  { value: 2100, label: 'Mon', dataPointText: '2.1k' },
+  { value: 2300, label: 'Tue', dataPointText: '2.3k' },
+  { value: 1800, label: 'Wed', dataPointText: '1.8k' },
+  { value: 2400, label: 'Thu', dataPointText: '2.4k' },
+  { value: 2550, label: 'Fri', dataPointText: '2.5k' },
+  { value: 1900, label: 'Sat', dataPointText: '1.9k' },
+  { value: 2150, label: 'Sun', dataPointText: '2.1k' },
 ];
 
-const pieData = [
-  { value: 30, color: '#6366f1', text: '30%', focused: true }, // Protein
-  { value: 45, color: '#f59e0b', text: '45%' }, // Carbs
-  { value: 25, color: '#10b981', text: '25%' }, // Fat
+const historyLogs = [
+  { id: 1, day: 'Sunday', date: 'Jan 11', calories: 2150, goal: 2200, status: 'success' },
+  { id: 2, day: 'Saturday', date: 'Jan 10', calories: 1900, goal: 2200, status: 'warning' },
+  { id: 3, day: 'Friday', date: 'Jan 09', calories: 2550, goal: 2200, status: 'danger' },
+  { id: 4, day: 'Thursday', date: 'Jan 08', calories: 2400, goal: 2200, status: 'warning' },
+  { id: 5, day: 'Wednesday', date: 'Jan 07', calories: 1800, goal: 2200, status: 'success' },
 ];
 
-export default function AnalyticsDashboard() {
-  const [activeTab, setActiveTab] = useState<'today' | 'trends'>('today');
+/* ---------------- Main Screen ---------------- */
+
+export default function AnalyticsHistory() {
+  const [range, setRange] = useState('Last 7 Days');
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8FAFC]">
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
-        {/* Header Section */}
-        <View className="px-6 py-4 flex-row justify-between items-center bg-white border-b border-gray-50 pb-6">
-          <View>
-            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Overview</Text>
-            <Text className="text-2xl font-extrabold text-slate-900">Health Pulse</Text>
-          </View>
-          <TouchableOpacity className="w-10 h-10 bg-indigo-50 rounded-full items-center justify-center border border-indigo-100">
-            <Calendar size={20} color="#4f46e5" />
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Analytics</Text>
+          
+          <TouchableOpacity style={styles.datePickerButton}>
+            <CalendarIcon size={14} color="#64748b" style={{ marginRight: 6 }} />
+            <Text style={styles.datePickerText}>{range}</Text>
+            <ChevronDown size={14} color="#64748b" />
           </TouchableOpacity>
         </View>
 
-        {/* Custom Tab Switcher */}
-        <View className="mx-6 mt-6 p-1 bg-gray-200/50 rounded-2xl flex-row h-14 items-center">
-          <TabButton 
-            title="Today" 
-            isActive={activeTab === 'today'} 
-            onPress={() => setActiveTab('today')} 
+        {/* 1. Trend Chart Card */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.card}>
+            <View style={styles.chartHeader}>
+              <Text style={styles.label}>Calorie Trend</Text>
+              <View style={styles.chartValueContainer}>
+                 <Text style={styles.bigNumber}>2,154</Text>
+                 <Text style={styles.unitText}>avg kcal</Text>
+              </View>
+            </View>
+
+            <LineChart
+              data={lineData}
+              color="#6366f1"
+              thickness={3}
+              dataPointsColor="#6366f1"
+              dataPointsRadius={4}
+              width={screenWidth - 80}
+              height={180}
+              curved
+              isAnimated
+              hideRules
+              yAxisThickness={0}
+              xAxisThickness={0}
+              xAxisLabelTextStyle={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}
+              hideYAxisText
+              startFillColor="rgba(99, 102, 241, 0.2)"
+              endFillColor="rgba(99, 102, 241, 0.01)"
+              startOpacity={0.9}
+              endOpacity={0.1}
+              areaChart
+            />
+          </View>
+        </View>
+
+        {/* 2. Key Statistics Grid */}
+        <View style={styles.statsGrid}>
+          <StatCard 
+            label="Weekly Total" 
+            value="15,080" 
+            unit="kcal" 
+            trend="+2.4%" 
+            isPositive={false} 
           />
-          <TabButton 
-            title="Trends" 
-            isActive={activeTab === 'trends'} 
-            onPress={() => setActiveTab('trends')} 
+          <StatCard 
+            label="Adherence" 
+            value="85" 
+            unit="%" 
+            trend="+12%" 
+            isPositive={true} 
           />
         </View>
 
-        {activeTab === 'today' ? (
-          <View className="px-6 mt-6 space-y-6">
-            
-            {/* Hero Card: Calories */}
-            <LinearGradient
-              colors={['#4f46e5', '#6366f1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="p-6 rounded-[28px] shadow-lg shadow-indigo-200"
-            >
-              <View className="flex-row justify-between items-start">
-                <View>
-                  <Text className="text-indigo-100 font-medium mb-1">Calories Remaining</Text>
-                  <Text className="text-4xl font-bold text-white">450 <Text className="text-lg text-indigo-200">kcal</Text></Text>
-                </View>
-                <View className="bg-white/20 p-2 rounded-xl">
-                  <Flame size={24} color="white" fill="white" />
-                </View>
-              </View>
-              
-              {/* Custom Progress Bar inside Hero */}
-              <View className="mt-6">
-                <View className="flex-row justify-between mb-2">
-                  <Text className="text-indigo-100 text-xs font-medium">Eaten: 2,100</Text>
-                  <Text className="text-indigo-100 text-xs font-medium">Goal: 2,550</Text>
-                </View>
-                <View className="h-3 bg-black/20 rounded-full overflow-hidden">
-                  <View style={{ width: '82%' }} className="h-full bg-white rounded-full" />
-                </View>
-              </View>
-            </LinearGradient>
-
-            {/* Metrics Grid */}
-            <View className="flex-row flex-wrap justify-between">
-               <MetricCard 
-                  label="Protein" 
-                  value="142g" 
-                  subValue="/ 150g" 
-                  percent={94} 
-                  color="bg-indigo-50" 
-                  barColor="bg-indigo-500"
-                  icon={<Beef size={20} color="#4f46e5" />} 
-                />
-               <MetricCard 
-                  label="Carbs" 
-                  value="210g" 
-                  subValue="/ 250g" 
-                  percent={84} 
-                  color="bg-amber-50" 
-                  barColor="bg-amber-500"
-                  icon={<Wheat size={20} color="#d97706" />} 
-                />
-               <MetricCard 
-                  label="Fats" 
-                  value="65g" 
-                  subValue="/ 70g" 
-                  percent={92} 
-                  color="bg-emerald-50" 
-                  barColor="bg-emerald-500"
-                  icon={<Activity size={20} color="#059669" />} 
-                />
-               <MetricCard 
-                  label="Water" 
-                  value="1.2L" 
-                  subValue="/ 2.5L" 
-                  percent={48} 
-                  color="bg-blue-50" 
-                  barColor="bg-blue-500"
-                  icon={<Droplets size={20} color="#2563eb" />} 
-                />
-            </View>
-
-            {/* Macro Breakdown */}
-            <View className="bg-white p-6 rounded-[28px] border border-gray-100 shadow-sm">
-              <Text className="font-bold text-lg text-slate-800 mb-6">Macro Balance</Text>
-              <View className="items-center">
-                <PieChart
-                  data={pieData}
-                  donut
-                  radius={100}
-                  innerRadius={75}
-                  innerCircleColor={'#fff'}
-                  centerLabelComponent={() => (
-                    <View className="items-center justify-center">
-                      <Text className="text-3xl font-bold text-slate-800">82%</Text>
-                      <Text className="text-xs text-gray-400 font-medium">Balanced</Text>
-                    </View>
-                  )}
-                />
-              </View>
-              {/* Custom Legend */}
-              <View className="flex-row justify-center gap-6 mt-8">
-                 <LegendDot color="#6366f1" label="Protein" value="30%" />
-                 <LegendDot color="#f59e0b" label="Carbs" value="45%" />
-                 <LegendDot color="#10b981" label="Fats" value="25%" />
-              </View>
-            </View>
-
+        {/* 3. Detailed History List */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>History Logs</Text>
+          <View style={styles.listContainer}>
+            {historyLogs.map((log) => (
+              <HistoryItem key={log.id} item={log} />
+            ))}
           </View>
-        ) : (
-          <View className="px-6 mt-6 space-y-6">
-            
-            {/* AI Insight Card */}
-            <LinearGradient
-               colors={['#7c3aed', '#a855f7']}
-               start={{ x: 0, y: 0 }}
-               end={{ x: 1, y: 0 }}
-               className="p-5 rounded-2xl flex-row items-center shadow-lg shadow-purple-200"
-            >
-              <View className="w-12 h-12 bg-white/20 rounded-xl items-center justify-center mr-4">
-                <TrendingUp color="white" size={24} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-purple-100 text-xs font-bold uppercase mb-1">AI Prediction</Text>
-                <Text className="text-white font-medium leading-5">
-                  You're crushing it! Projected to hit your goal in <Text className="font-bold underline">12 days</Text>.
-                </Text>
-              </View>
-            </LinearGradient>
+        </View>
 
-            {/* Weekly Chart */}
-            <View className="bg-white p-6 rounded-[28px] border border-gray-100 shadow-sm">
-              <View className="flex-row justify-between items-center mb-8">
-                <View>
-                  <Text className="font-bold text-lg text-slate-800">Weekly Activity</Text>
-                  <Text className="text-gray-400 text-xs mt-1">Avg. 2150 kcal</Text>
-                </View>
-                <View className="bg-gray-50 px-3 py-1.5 rounded-lg">
-                  <Text className="text-gray-500 text-xs font-medium">Last 7 Days</Text>
-                </View>
-              </View>
-
-              <BarChart
-                data={barData}
-                barWidth={28}
-                noOfSections={3}
-                barBorderTopLeftRadius={8}
-                barBorderTopRightRadius={8}
-                frontColor="#6366f1"
-                showGradient
-                gradientColor="#818cf8"
-                yAxisThickness={0}
-                xAxisThickness={0}
-                yAxisTextStyle={{ color: '#94a3b8', fontSize: 11 }}
-                xAxisLabelTextStyle={{ color: '#64748b', fontSize: 12, fontWeight: '600' }}
-                rulesColor="#f1f5f9"
-                rulesType="dashed"
-                dashGap={6}
-                hideYAxisText={false}
-              />
-            </View>
-            
-            {/* Simple List Item for history */}
-            <View className="bg-white rounded-3xl p-4 border border-gray-100">
-                <Text className="font-bold text-lg text-slate-800 mb-4 px-2">Recent Logs</Text>
-                {[1,2,3].map((_, i) => (
-                    <TouchableOpacity key={i} className="flex-row items-center justify-between p-3 mb-2 bg-gray-50 rounded-2xl">
-                        <View className="flex-row items-center gap-3">
-                            <View className="w-10 h-10 bg-white rounded-xl items-center justify-center border border-gray-100">
-                                <Activity size={18} color="#64748b" />
-                            </View>
-                            <View>
-                                <Text className="font-semibold text-slate-700">Evening Snack</Text>
-                                <Text className="text-xs text-gray-400">180 kcal • 8:30 PM</Text>
-                            </View>
-                        </View>
-                        <ChevronRight size={18} color="#cbd5e1" />
-                    </TouchableOpacity>
-                ))}
-            </View>
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// --- Polished Helper Components ---
+/* ---------------- Sub-Components ---------------- */
 
-function TabButton({ title, isActive, onPress }: any) {
+function StatCard({ label, value, unit, trend, isPositive }) {
   return (
-    <TouchableOpacity 
-      onPress={onPress}
-      className={`flex-1 h-12 m-1 rounded-xl items-center justify-center ${isActive ? 'bg-white shadow-sm' : 'bg-transparent'}`}
-    >
-      <Text className={`font-bold text-sm ${isActive ? 'text-indigo-600' : 'text-gray-500'}`}>
-        {title}
-      </Text>
+    <View style={[styles.card, styles.statCard]}>
+      <Text style={styles.labelSmall}>{label}</Text>
+      
+      <View style={styles.statValueContainer}>
+        <Text style={styles.statNumber}>{value}</Text>
+        <Text style={styles.statUnit}>{unit}</Text>
+      </View>
+
+      <View style={[styles.trendBadge, isPositive ? styles.trendUp : styles.trendDown]}>
+        {isPositive ? (
+          <ArrowUpRight size={12} color="#10b981" />
+        ) : (
+          <ArrowDownRight size={12} color="#f43f5e" />
+        )}
+        <Text style={[styles.trendText, isPositive ? styles.textSuccess : styles.textDanger]}>
+          {trend}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function HistoryItem({ item }) {
+  const getStatusStyles = (status) => {
+    switch(status) {
+      case 'success': return { bg: '#ecfdf5', text: '#059669', icon: '#10b981' }; // emerald-50
+      case 'warning': return { bg: '#fffbeb', text: '#d97706', icon: '#f59e0b' }; // amber-50
+      case 'danger': return { bg: '#fff1f2', text: '#e11d48', icon: '#f43f5e' }; // rose-50
+      default: return { bg: '#f8fafc', text: '#475569', icon: '#64748b' };
+    }
+  };
+
+  const statusStyle = getStatusStyles(item.status);
+
+  return (
+    <TouchableOpacity style={styles.historyItem}>
+      <View style={styles.historyLeft}>
+        <View style={styles.dateBox}>
+          <Text style={styles.dateMonth}>{item.date.split(' ')[0]}</Text>
+          <Text style={styles.dateDay}>{item.date.split(' ')[1]}</Text>
+        </View>
+
+        <View>
+          <Text style={styles.historyDayTitle}>{item.day}</Text>
+          <View style={styles.historyMeta}>
+            <Flame size={12} color="#94a3b8" strokeWidth={3} />
+            <Text style={styles.historyMetaText}>
+              {item.calories} / {item.goal} kcal
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+        {item.status === 'success' ? (
+           <CheckCircle2 size={12} color={statusStyle.icon} />
+        ) : (
+           <AlertCircle size={12} color={statusStyle.icon} />
+        )}
+        <Text style={[styles.statusText, { color: statusStyle.text }]}>
+          {item.status === 'success' ? 'Good' : item.status === 'danger' ? 'Over' : 'Under'}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
 
-function MetricCard({ label, value, subValue, icon, color, barColor, percent }: any) {
-  return (
-    <View style={{ width: screenWidth * 0.43 }} className="bg-white p-4 rounded-[24px] border border-gray-100 mb-4 shadow-sm">
-      <View className="flex-row justify-between items-start mb-3">
-        <View className={`w-10 h-10 rounded-full ${color} items-center justify-center`}>
-          {icon}
-        </View>
-        <Text className="text-slate-400 text-[10px] font-bold uppercase mt-1">{label}</Text>
-      </View>
-      
-      <View className="mb-3">
-        <Text className="text-xl font-bold text-slate-900">{value}</Text>
-        <Text className="text-xs text-gray-400 font-medium">{subValue}</Text>
-      </View>
+/* ---------------- STYLESHEET ---------------- */
 
-      <View className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <View style={{ width: `${percent}%` }} className={`h-full ${barColor} rounded-full`} />
-      </View>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC', // Slate-50 background
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    marginBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b', // Slate-800
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  datePickerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    marginRight: 4,
+  },
 
-function LegendDot({ color, label, value }: any) {
-  return (
-    <View className="items-center">
-        <View className="flex-row items-center gap-2 mb-1">
-            <View className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-            <Text className="text-xs text-gray-400 font-medium">{label}</Text>
-        </View>
-        <Text className="text-sm font-bold text-slate-700">{value}</Text>
-    </View>
-  );
-}
+  // Common Card Styles
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9', // Slate-100
+    // Soft Shadow
+    shadowColor: "#64748b",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  sectionContainer: {
+    paddingHorizontal: 24,
+  },
+
+  // Chart Styles
+  chartHeader: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#94a3b8', // Slate-400
+    marginBottom: 4,
+  },
+  chartValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  bigNumber: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#1e293b',
+  },
+  unitText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    marginBottom: 6,
+    marginLeft: 8,
+  },
+
+  // Stats Grid
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  statCard: {
+    width: '48%',
+    padding: 16,
+  },
+  labelSmall: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  statValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1e293b',
+  },
+  statUnit: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    marginLeft: 4,
+  },
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  trendUp: {
+    backgroundColor: '#ecfdf5', // emerald-50
+  },
+  trendDown: {
+    backgroundColor: '#fff1f2', // rose-50
+  },
+  trendText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  textSuccess: {
+    color: '#059669',
+  },
+  textDanger: {
+    color: '#e11d48',
+  },
+
+  // History List
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 16,
+  },
+  listContainer: {
+    gap: 12, // React Native 0.71+ supports gap
+  },
+  historyItem: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  historyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateBox: {
+    backgroundColor: '#f8fafc',
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  dateMonth: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+  },
+  dateDay: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1e293b',
+  },
+  historyDayTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  historyMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  historyMetaText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#94a3b8',
+    marginLeft: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  },
+});
