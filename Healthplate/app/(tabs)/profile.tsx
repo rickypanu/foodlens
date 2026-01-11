@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from "../../src/services/api";
-
+import CustomHeader from '../../src/components/header';
 // --- CONFIGURATION ---
 const THEME_COLOR = '#10B981'; // Emerald 500
 const BG_COLOR = '#F3F4F6';
@@ -152,11 +152,17 @@ export default function ProfileScreen() {
   const KNOWN_KEYS = ['_id', 'password', 'name', 'email', 'age', 'height', 'weight', 'food_preference', 'activity_level', 'bio', 'is_private', 'gender'];
 
   return (
+    <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+      
+      {/* USE THE HEADER HERE */}
+      <CustomHeader />
+
     <ScrollView 
         style={{ flex: 1, backgroundColor: BG_COLOR }}
         contentContainerStyle={{ paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      
       
       {/* 1. Header Section */}
       <View style={styles.header}>
@@ -317,6 +323,7 @@ export default function ProfileScreen() {
       </View>
 
     </ScrollView>
+    </View>
   );
 }
 
