@@ -10,7 +10,7 @@ import {
 import { useAuth } from "../../src/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
   const { userData } = useAuth();
@@ -24,11 +24,29 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <TouchableOpacity
-        onPress={() => navigation.navigate("../subscribe")} // your screen name
-      >
-        <Text style={styles.subscriptionLink}>Buy Subscription</Text>
-      </TouchableOpacity>
+      <View style={styles.bannerContainer}>
+        <View style={styles.leftContent}>
+          {/* Icon: You can replace '🕒' with an <Icon /> component if you use vector-icons */}
+          <View style={styles.iconCircle}>
+            <Text style={{ fontSize: 16 }}>🕒</Text>
+          </View>
+
+          <View style={styles.textWrapper}>
+            <Text style={styles.bannerTitle}>Free trial ends in 4 days</Text>
+            <Text style={styles.bannerSubtitle}>
+              Enjoying FoodLens? Continue for just ₹40/month
+            </Text>
+          </View>
+        </View>
+
+        {/* The Upgrade Button */}
+        <TouchableOpacity
+          style={styles.upgradeButton}
+          onPress={() => router.push("/SubscriptionChoice")}
+        >
+          <Text style={styles.upgradeBtnText}>Upgrade</Text>
+        </TouchableOpacity>
+      </View>
       {/* HEADER */}
       <View style={styles.header}>
         {/* Logo */}
@@ -70,15 +88,15 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.statusCard}>
-      {/* Add Meal Button */}
-      <TouchableOpacity
-        style={styles.addMealButton}
-        onPress={() => router.push('/add')} // navigate to add tab
-      >
-        <Ionicons name="add-circle-outline" size={20} color="#fff" />
-        <Text style={styles.addMealText}>Add Meal</Text>
-      </TouchableOpacity>
-    </View>
+        {/* Add Meal Button */}
+        <TouchableOpacity
+          style={styles.addMealButton}
+          onPress={() => router.push("/add")} // navigate to add tab
+        >
+          <Ionicons name="add-circle-outline" size={20} color="#fff" />
+          <Text style={styles.addMealText}>Add Meal</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* STATS */}
       <View style={styles.statsRow}>
@@ -106,11 +124,60 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  bannerContainer: {
+    backgroundColor: "#FFF8E1", // The light yellow background
+    flexDirection: "row", // Align items horizontally
+    alignItems: "center", // Center items vertically
+    justifyContent: "space-between", // Push button to the right
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    width: "100%",
+  },
+  leftContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1, // Allows text to take up remaining space so it wraps if needed
+    marginRight: 12,
+  },
+  iconCircle: {
+    backgroundColor: "#FFE0B2", // Slightly darker yellow circle behind icon
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  textWrapper: {
+    flex: 1, // Ensures text wraps correctly before hitting the button
+  },
+  bannerTitle: {
+    color: "#78350F", // Dark brownish-orange for title
+    fontWeight: "bold",
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  bannerSubtitle: {
+    color: "#92400E", // Lighter brown for subtitle
+    fontSize: 12,
+  },
+  upgradeButton: {
+    backgroundColor: "#F59E0B", // The specific Orange button color
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  upgradeBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
   container: {
     flex: 1,
     backgroundColor: "#fff",
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 0,
   },
   subscriptionLink: {
     color: "#1E90FF",

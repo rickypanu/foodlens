@@ -40,18 +40,19 @@ async def signup(user_data: UserSignupSchema):
 @router.post("/login")
 async def login(credentials: UserLoginSchema):
     user = await users_collection.find_one({"email": credentials.email})
+    
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_access_token({"sub": user["email"]})
+    # FIX: Use str(user["_id"]) so the token contains the unique ID
+    token = create_access_token({"sub": str(user["_id"])})
 
-    # Remove sensitive fields like password
-    user_data = {
-        key: value for key, value in user.items() if key != "password" and key != "_id"
-    }
+    # Prepare user data for frontend (convert _id to string)
+    user["_id"] = str(user["_id"])
+    user.pop("password", None) # Remove password safely
 
     return {
         "token": token,
-        "user": user_data
+        "user": user
     }
 

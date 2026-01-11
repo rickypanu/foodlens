@@ -8,7 +8,7 @@ import os
 from database import communitypost  # MotorCollection
 
 # Router for community posts
-route = APIRouter(prefix="/posts", tags=["Posts"])
+router = APIRouter(prefix="/posts", tags=["Posts"])
 
 # Pydantic model for a post
 class PostCreate(BaseModel):
@@ -24,7 +24,7 @@ class PostCreate(BaseModel):
     comments_count: int = 0
 
 # Endpoint to create a post
-@route.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_post(post: PostCreate):
     post_dict = post.dict()
     post_dict["_id"] = str(uuid4())  # MongoDB uses _id
@@ -36,14 +36,14 @@ async def create_post(post: PostCreate):
     return post_dict
 
 # Endpoint to list posts
-@route.get("/", response_model=List[PostCreate])
+@router.get("/", response_model=List[PostCreate])
 async def list_posts():
     posts_cursor = communitypost.find({})
     posts = await posts_cursor.to_list(length=100)  # limit to 100 posts
     return posts
 
 # Optional: endpoint to upload images
-@route.post("/upload-image")
+@router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     try:
         file_ext = os.path.splitext(file.filename)[1]
