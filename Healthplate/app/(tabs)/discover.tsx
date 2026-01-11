@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import PlansRecipes from '../discoversub/PlansRecipes';
 import NutritionGuide from '../discoversub/NutritionGuide';
 import Community from '../discoversub/Community';
+import CustomHeader from "@/src/components/header";
 
 export default function DiscoverScreen() {
   const [tab, setTab] = useState("nutrition");
@@ -12,8 +13,10 @@ export default function DiscoverScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Text style={styles.logo}>Healthplate</Text>
+      {/* <Text style={styles.logo}>Healthplate</Text>
       <Text style={styles.tagline}>Made for Indian meals. Built for better health.</Text>
+      <Text style={styles.title}>Discover</Text> */}
+      <CustomHeader/>
       <Text style={styles.title}>Discover</Text>
 
       {/* Tabs */}
