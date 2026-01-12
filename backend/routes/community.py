@@ -1,59 +1,94 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import List, Optional
-from uuid import uuid4
-import shutil
 import os
-from database import communitypost  # MotorCollection
+import shutil
+from uuid import uuid4
+from datetime import datetime
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, UploadFile, File
+from pydantic import BaseModel, Field, BeforeValidator
+from typing_extensions import Annotated
+from bson import ObjectId
 
-# Router for community posts
+# Database import 
+from database import communitypost 
+
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
-# Pydantic model for a post
-class PostCreate(BaseModel):
+# --- Helpers & Models ---
+
+PyObjectId = Annotated[str, BeforeValidator(str)]
+
+class PostModel(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     user_id: str
     user_name: str
     type: str
     title: Optional[str] = None
     content: str
     image_url: Optional[str] = None
-    tags: Optional[List[str]] = []
-    is_public: bool
+    tags: List[str] = []
+    is_public: bool = True
     likes_count: int = 0
     comments_count: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-# Endpoint to create a post
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_post(post: PostCreate):
-    post_dict = post.dict()
-    post_dict["_id"] = str(uuid4())  # MongoDB uses _id
+# Ensure this matches the JSON sent from React Native
+class CreatePostRequest(BaseModel):
+    user_id: str
+    user_name: str
+    type: str
+    title: Optional[str] = ""
+    content: str
+    image_url: Optional[str] = ""
+    tags: str # We receive tags as a comma string, then process them
+    is_public: bool = True
 
-    result = await communitypost.insert_one(post_dict)  # <-- async insert
-    if not result.inserted_id:
-        raise HTTPException(status_code=500, detail="Failed to create post")
-    
-    return post_dict
+# --- Routes ---
 
-# Endpoint to list posts
-@router.get("/", response_model=List[PostCreate])
-async def list_posts():
-    posts_cursor = communitypost.find({})
-    posts = await posts_cursor.to_list(length=100)  # limit to 100 posts
-    return posts
+# 1. Upload Image
+UPLOAD_DIR = "static/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Optional: endpoint to upload images
-@router.post("/upload-image")
+@router.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     try:
-        file_ext = os.path.splitext(file.filename)[1]
-        filename = f"{uuid4()}{file_ext}"
-        file_path = f"uploads/{filename}"
-
-        os.makedirs("uploads", exist_ok=True)
+        file_extension = file.filename.split(".")[-1]
+        filename = f"{uuid4()}.{file_extension}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-
-        return {"file_url": f"/{file_path}"}
+            
+        # Update this IP if you are not using localhost for accessing the image
+        return {"file_url": f"http://192.168.136.55:8000/static/uploads/{filename}"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 2. Create Post
+@router.post("/", response_model=PostModel)
+async def create_post(post: CreatePostRequest):
+    # Process tags
+    tag_list = [t.strip() for t in post.tags.split(',') if t.strip()]
+    
+    new_post = PostModel(
+        user_id=post.user_id,
+        user_name=post.user_name,
+        type=post.type,
+        title=post.title,
+        content=post.content,
+        image_url=post.image_url,
+        tags=tag_list,
+        is_public=post.is_public
+    )
+    
+    result = await communitypost.insert_one(new_post.model_dump(by_alias=True, exclude=["id"]))
+    created_post = await communitypost.find_one({"_id": result.inserted_id})
+    return created_post
+
+# 3. Get Feed
+@router.get("/", response_model=List[PostModel])
+async def get_feed(limit: int = 20):
+    posts = await communitypost.find() \
+        .sort("created_at", -1) \
+        .limit(limit) \
+        .to_list(limit)
+    return posts

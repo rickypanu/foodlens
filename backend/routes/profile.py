@@ -1,4 +1,4 @@
-# routes/user_routes.py
+# routes/profile.py
 from fastapi import APIRouter, HTTPException, Depends, Body
 from database import users_collection
 from bson import ObjectId

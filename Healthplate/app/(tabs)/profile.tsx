@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from "../../src/services/api";
 import CustomHeader from '../../src/components/header';
+import PremiumPlanScreen from '../../src/components/PremiumPlanScreen';
 // --- CONFIGURATION ---
 const THEME_COLOR = '#10B981'; // Emerald 500
 const BG_COLOR = '#F3F4F6';
@@ -222,6 +223,8 @@ export default function ProfileScreen() {
             <Text style={styles.bioText}>{data.bio || "No bio added yet."}</Text>
           )}
       </View>
+      
+      <PremiumPlanScreen/>
 
       {/* 4. Preferences (Diet, Activity, Gender) */}
       <View style={styles.card}>
