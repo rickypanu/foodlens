@@ -26,7 +26,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="add"
+        name="addmeal"
         options={{
           title: 'Add',
           tabBarIcon: ({ color }) => (

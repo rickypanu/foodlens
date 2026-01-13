@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,31 +6,83 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
-import { useAuth } from "../../src/context/AuthContext";
+import { useAuth } from "../../src/context/AuthContext"; // Assuming you have this
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import { api } from "@/src/services/api";
+
+// --- CONFIGURATION ---
+const CALORIE_TARGET = 2500; // Set your daily goal here
+const PROTEIN_TARGET = 109;  // Set your daily protein goal here
 
 export default function HomeScreen() {
   const { userData } = useAuth();
   const navigation = useNavigation();
   const router = useRouter();
+  
+  // --- STATE ---
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total_calories: 0,
+    total_protein: 0,
+    meal_count: 0
+  });
+
+  // --- DATE FORMATTING ---
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
 
+  // --- FETCH DATA FUNCTION ---
+const fetchDailyStats = async () => {
+    try {
+      // 1. Check if email exists first
+      const userEmail = userData?.email;
+      if (!userEmail) {
+        console.log("No user email found, skipping fetch.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Get Date
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      // 3. Request with BACKTICKS (key change here)
+      console.log(`Fetching stats for: ${userEmail}`); // Debug log
+      const response = await api.get(`/users/${userEmail}/daily-stats?date_str=${dateStr}`);
+      
+      setStats(response.data);
+    } catch (error) {
+      console.log("Error fetching stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- REFRESH ON FOCUS ---
+  // This runs every time you navigate back to this screen
+  useFocusEffect(
+    useCallback(() => {
+      fetchDailyStats();
+    }, [])
+  );
+
+  // Calculate Remaining
+  const remainingCalories = CALORIE_TARGET - stats.total_calories;
+
   return (
     <ScrollView style={styles.container}>
+      {/* BANNER */}
       <View style={styles.bannerContainer}>
         <View style={styles.leftContent}>
-          {/* Icon: You can replace '🕒' with an <Icon /> component if you use vector-icons */}
           <View style={styles.iconCircle}>
             <Text style={{ fontSize: 16 }}>🕒</Text>
           </View>
-
           <View style={styles.textWrapper}>
             <Text style={styles.bannerTitle}>Free trial ends in 4 days</Text>
             <Text style={styles.bannerSubtitle}>
@@ -38,8 +90,6 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
-
-        {/* The Upgrade Button */}
         <TouchableOpacity
           style={styles.upgradeButton}
           onPress={() => router.push("/SubscriptionChoice")}
@@ -47,26 +97,22 @@ export default function HomeScreen() {
           <Text style={styles.upgradeBtnText}>Upgrade</Text>
         </TouchableOpacity>
       </View>
+
       {/* HEADER */}
       <View style={styles.header}>
-        {/* Logo */}
         <Image
           source={require("../../assets/images/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
-
-        {/* App Name */}
         <Text style={styles.appName}>Healthplate</Text>
-
-        {/* Tagline */}
         <Text style={styles.tagline}>
           Made for Indian Meals. Built for better Health
         </Text>
       </View>
 
       {/* GREETING */}
-      <Text style={styles.greeting}>Hey {userData?.name || "User"}! 👋</Text>
+      <Text style={styles.greeting}>Hey {userData?.name || "Student"}! 👋</Text>
       <Text style={styles.date}>{today}</Text>
 
       {/* HEALTH TIP */}
@@ -87,48 +133,74 @@ export default function HomeScreen() {
         <Text style={styles.statusText}>Keep up the good work!</Text>
       </View>
 
+      {/* ADD MEAL BUTTON */}
       <View style={styles.statusCard}>
-        {/* Add Meal Button */}
         <TouchableOpacity
           style={styles.addMealButton}
-          onPress={() => router.push("/add")} // navigate to add tab
+          onPress={() => router.push("/addmeal")}
         >
           <Ionicons name="add-circle-outline" size={20} color="#fff" />
           <Text style={styles.addMealText}>Add Meal</Text>
         </TouchableOpacity>
       </View>
 
-      {/* STATS */}
-      <View style={styles.statsRow}>
-        <View style={styles.darkCard}>
-          <Text style={styles.cardLabel}>Remaining</Text>
-          <Text style={styles.cardValue}>3015</Text>
-          <Text style={styles.cardSub}>calories left today</Text>
-        </View>
+      {/* --- DYNAMIC STATS SECTION --- */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#4CAF50" style={{marginTop: 20}} />
+      ) : (
+        <>
+          {/* CALORIES & MEALS ROW */}
+          <View style={styles.statsRow}>
+            {/* Dark Card - Remaining Calories */}
+            <View style={styles.darkCard}>
+              <Text style={styles.cardLabel}>Remaining</Text>
+              <Text style={styles.cardValue}>{remainingCalories}</Text>
+              <Text style={styles.cardSub}>calories left today</Text>
+            </View>
 
-        <View style={styles.lightCard}>
-          <Text style={styles.cardLabel}>Meals</Text>
-          <Text style={styles.cardValueDark}>0</Text>
-          <Text style={styles.cardSub}>logged today</Text>
-        </View>
-      </View>
+            {/* Light Card - Meal Count */}
+            <View style={styles.lightCard}>
+              <Text style={styles.cardLabel}>Meals</Text>
+              <Text style={styles.cardValueDark}>{stats.meal_count}</Text>
+              <Text style={styles.cardSub}>logged today</Text>
+            </View>
+          </View>
 
-      {/* PROTEIN */}
-      <View style={styles.proteinCard}>
-        <Text style={styles.cardLabel}>Protein</Text>
-        <Text style={styles.cardValueDark}>0g</Text>
-        <Text style={styles.cardSub}>/ 109g target</Text>
-      </View>
+          {/* PROTEIN CARD */}
+          <View style={styles.proteinCard}>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+               <Text style={styles.cardLabel}>Protein</Text>
+               <Text style={styles.cardValueDark}>
+                 {stats.total_protein}g 
+                 <Text style={{fontSize: 14, color: '#9CA3AF', fontWeight: '400'}}> / {PROTEIN_TARGET}g</Text>
+               </Text>
+            </View>
+            
+            {/* Simple Progress Bar */}
+            <View style={{height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, marginTop: 10}}>
+              <View style={{
+                height: 6, 
+                backgroundColor: '#4CAF50', 
+                borderRadius: 3, 
+                width: `${Math.min((stats.total_protein / PROTEIN_TARGET) * 100, 100)}%`
+              }} />
+            </View>
+          </View>
+        </>
+      )}
+      
+      {/* Spacer for bottom tab bar */}
+      <View style={{height: 20}} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   bannerContainer: {
-    backgroundColor: "#FFF8E1", // The light yellow background
-    flexDirection: "row", // Align items horizontally
-    alignItems: "center", // Center items vertically
-    justifyContent: "space-between", // Push button to the right
+    backgroundColor: "#FFF8E1",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     paddingHorizontal: 16,
     width: "100%",
@@ -136,11 +208,11 @@ const styles = StyleSheet.create({
   leftContent: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1, // Allows text to take up remaining space so it wraps if needed
+    flex: 1,
     marginRight: 12,
   },
   iconCircle: {
-    backgroundColor: "#FFE0B2", // Slightly darker yellow circle behind icon
+    backgroundColor: "#FFE0B2",
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -149,20 +221,20 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   textWrapper: {
-    flex: 1, // Ensures text wraps correctly before hitting the button
+    flex: 1,
   },
   bannerTitle: {
-    color: "#78350F", // Dark brownish-orange for title
+    color: "#78350F",
     fontWeight: "bold",
     fontSize: 14,
     marginBottom: 2,
   },
   bannerSubtitle: {
-    color: "#92400E", // Lighter brown for subtitle
+    color: "#92400E",
     fontSize: 12,
   },
   upgradeButton: {
-    backgroundColor: "#F59E0B", // The specific Orange button color
+    backgroundColor: "#F59E0B",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 6,
@@ -178,12 +250,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 20,
     paddingTop: 0,
-  },
-  subscriptionLink: {
-    color: "#1E90FF",
-    fontWeight: "600",
-    marginTop: 10,
-    textDecorationLine: "underline",
   },
   addMealButton: {
     flexDirection: "row",
@@ -203,7 +269,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    alignItems: "center", // centers logo, name, tagline
+    alignItems: "center",
     justifyContent: "center",
     paddingVertical: 20,
   },
@@ -218,7 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 4, // space between name and tagline
+    marginBottom: 4,
   },
   tagline: {
     fontSize: 14,
@@ -303,6 +369,7 @@ const styles = StyleSheet.create({
   cardValueDark: {
     fontSize: 32,
     fontWeight: "700",
+    color: '#111827'
   },
 
   cardSub: {
