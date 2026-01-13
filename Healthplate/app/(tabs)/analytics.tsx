@@ -19,6 +19,7 @@ import {
   AlertCircle
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CustomHeader from '@/src/components/header';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -44,9 +45,12 @@ const historyLogs = [
 /* ---------------- Main Screen ---------------- */
 
 export default function AnalyticsHistory() {
+
   const [range, setRange] = useState('Last 7 Days');
 
   return (
+    <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+      <CustomHeader/>
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
@@ -126,6 +130,7 @@ export default function AnalyticsHistory() {
 
       </ScrollView>
     </SafeAreaView>
+    </View>
   );
 }
 

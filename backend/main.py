@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import user_routes, addmeal, community, profile
 import uvicorn
 import time
+from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI(title="Healthplate API")
 
@@ -12,8 +14,13 @@ origins = [
     "http://192.168.136.55:8081",
 ]
 
+# Create the directory if it doesn't exist
+os.makedirs("static/uploads", exist_ok=True)
+
+# MOUNT STATIC FILES -> This makes the image URL working
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # --- CORS Configuration ---
-# Allow all origins for development. In production, replace ["*"] with specific app URLs.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins, 

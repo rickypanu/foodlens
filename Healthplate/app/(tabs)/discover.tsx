@@ -11,12 +11,13 @@ export default function DiscoverScreen() {
   const [tab, setTab] = useState("nutrition");
 
   return (
+    <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+     <CustomHeader/>
+     
     <View style={styles.container}>
       {/* Header */}
-      {/* <Text style={styles.logo}>Healthplate</Text>
-      <Text style={styles.tagline}>Made for Indian meals. Built for better health.</Text>
-      <Text style={styles.title}>Discover</Text> */}
-      <CustomHeader/>
+     
+
       <Text style={styles.title}>Discover</Text>
 
       {/* Tabs */}
@@ -33,6 +34,7 @@ export default function DiscoverScreen() {
         {tab === "community" && <Community />}
       </ScrollView>
     </View>
+    </View>
   );
 }
 
@@ -45,7 +47,7 @@ function Tab({ label, active, onPress }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  container: {flex: 1, padding: 16, backgroundColor: "#fff" },
   logo: { fontSize: 22, fontWeight: "700", color: "#1aa37a" },
   tagline: { color: "#777", marginBottom: 12 },
   title: { fontSize: 26, fontWeight: "700", marginVertical: 12 },

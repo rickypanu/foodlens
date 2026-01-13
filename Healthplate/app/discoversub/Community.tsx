@@ -8,21 +8,34 @@ import {
   FlatList,
   Alert,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  ScrollView // Import ScrollView for the horizontal tags
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker'; // Make sure to install: npx expo install expo-image-picker
+import * as ImagePicker from 'expo-image-picker';
 import { api } from '../../src/services/api'; 
+import { useAuth } from '@/src/context/AuthContext';
+
+// --- CONFIGURATION ---
+const POST_TYPES = ["General", "Tip", "Motivational", "Journey", "Question", "Project", "Resource"];
 
 export default function Community() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // New State for creating posts
+  const [refreshing, setRefreshing] = useState(false);
+  const { userData } = useAuth();
+
+  // Input States
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
+  const [newType, setNewType] = useState('General'); // Default selected
+  const [newTags, setNewTags] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [isPosting, setIsPosting] = useState(false);
 
+  // Fetch Posts
   const fetchPosts = async () => {
     try {
       const res = await api.get('/posts/');
@@ -31,6 +44,7 @@ export default function Community() {
       console.error('Error fetching posts:', error.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -38,9 +52,74 @@ export default function Community() {
     fetchPosts();
   }, []);
 
-  // 1. Function to Pick Image
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchPosts();
+  };
+
+  // Handle Like
+
+  const handleLike = async (postId) => {
+    // 1. Safety Check: Is User Logged In?
+    // Use optional chaining (?.) to prevent crash if userData is null
+    const currentUserId = userData?.email; 
+    
+    if (!currentUserId) {
+      Alert.alert("Login Required", "You need to be logged in to like posts.");
+      return;
+    }
+
+    // 2. Safety Check: Find the post
+    const targetPost = posts.find(p => p._id === postId);
+    
+    if (!targetPost) {
+      console.error("Error: Post not found in state for ID:", postId);
+      return; // Stop function to prevent crash
+    }
+
+    // 3. Safety Check: Ensure liked_by is always an array
+    // If backend sends null/undefined, default to []
+    const currentLikedBy = targetPost.liked_by || []; 
+    const isLiked = currentLikedBy.includes(currentUserId);
+
+    // 4. Optimistic Update (Update UI instantly)
+    setPosts(currentPosts => 
+      currentPosts.map(post => {
+        if (post._id === postId) {
+          // Calculate new list safely
+          let newLikedBy;
+          if (isLiked) {
+             // Unlike: Remove user
+             newLikedBy = (post.liked_by || []).filter(id => id !== currentUserId);
+          } else {
+             // Like: Add user
+             newLikedBy = [...(post.liked_by || []), currentUserId];
+          }
+
+          return {
+            ...post,
+            likes_count: isLiked ? Math.max(0, post.likes_count - 1) : post.likes_count + 1,
+            liked_by: newLikedBy
+          };
+        }
+        return post;
+      })
+    );
+
+    // 5. API Call
+    try {
+      await api.put(`/posts/${postId}/like`, { user_id: currentUserId });
+      console.log("Server updated like status");
+    } catch (error) {
+      console.error("Like API failed:", error);
+      Alert.alert("Connection Error", "Could not update like status.");
+      fetchPosts(); // Revert changes if server fails
+    }
+  };
+
+
+  // Pick Image
   const pickImage = async () => {
-    // Request permission first
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
@@ -60,7 +139,7 @@ export default function Community() {
     }
   };
 
-  // 2. Function to Create Post
+  // Create Post
   const handleCreatePost = async () => {
     if (!newContent.trim()) {
       Alert.alert("Error", "Please add a description.");
@@ -72,17 +151,14 @@ export default function Community() {
     try {
       let imageUrl = "";
 
-      // A. Upload Image if selected
       if (selectedImage) {
         const formData = new FormData();
         formData.append('file', {
           uri: selectedImage.uri,
-          name: 'upload.jpg', // You can generate dynamic names if needed
+          name: 'upload.jpg',
           type: 'image/jpeg',
         });
 
-        // Ensure your API client handles multipart/form-data automatically 
-        // or set headers manually if using standard fetch
         const uploadRes = await api.post('/posts/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
@@ -90,26 +166,27 @@ export default function Community() {
         imageUrl = uploadRes.data.file_url;
       }
 
-      // B. Create Post Payload matching your Python Pydantic Model
       const postData = {
-        user_id: "user_123_placeholder", // REPLACE with actual user ID from Auth
-        user_name: "Engineering Student", // REPLACE with actual name
-        type: "general",
+        user_id: userData?.email || "unknown_id",
+        user_name: userData?.name || "Anonymous",
+        type: newType, // Uses the selected chip
         title: newTitle,
         content: newContent,
         image_url: imageUrl,
-        tags: "community, update", // Default tag or add an input for this
+        tags: newTags,
         is_public: true
       };
 
-      // C. Send to Backend
       await api.post('/posts/', postData);
 
-      // D. Cleanup and Refresh
+      // Cleanup
       setNewTitle('');
       setNewContent('');
+      setNewTags('');
+      setNewType('General'); // Reset to default
       setSelectedImage(null);
-      fetchPosts(); // Refresh list
+      
+      fetchPosts(); 
       Alert.alert("Success", "Post created successfully!");
 
     } catch (error) {
@@ -121,92 +198,141 @@ export default function Community() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: '#fff' }}>
-      <TouchableOpacity style={styles.shareBtn} onPress={fetchPosts}>
-        <Text style={styles.shareText}>↻ Refresh Feed</Text>
-      </TouchableOpacity>
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#10b981" />
-      ) : (
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <Post
-              name={item.user_name}
-              date={formatDate(item.created_at)}
-              text={item.content}
-              title={item.title}
-              image={item.image_url}
-              likes={item.likes_count}
-            />
-          )}
-          style={{ marginBottom: 16 }}
-        />
-      )}
-
-      {/* CREATE POST SECTION */}
-      <View style={styles.createPost}>
-        <Text style={styles.sectionTitle}>Create a Post</Text>
+    <KeyboardAvoidingView 
+      style={{ flex: 1, backgroundColor: '#fff' }} 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={80} 
+    >
+      <View style={{ flex: 1, padding: 16 }}>
         
-        <TextInput 
-          placeholder="Title (Optional)" 
-          style={styles.input} 
-          value={newTitle}
-          onChangeText={setNewTitle}
-        />
-        
-        <TextInput
-          placeholder="What's on your mind?"
-          style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-          multiline
-          value={newContent}
-          onChangeText={setNewContent}
-        />
-
-        {selectedImage && (
-          <View style={{ marginBottom: 10 }}>
-            <Image source={{ uri: selectedImage.uri }} style={{ width: 100, height: 100, borderRadius: 8 }} />
-            <TouchableOpacity onPress={() => setSelectedImage(null)}>
-              <Text style={{ color: 'red', fontSize: 12 }}>Remove Image</Text>
-            </TouchableOpacity>
-          </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#10b981" style={{marginTop: 20}} />
+        ) : (
+          <FlatList
+            data={posts}
+            keyExtractor={(item) => item._id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#10b981"]} />
+            }
+            renderItem={({ item }) => (
+              <Post
+                id={item._id}
+                name={item.user_name}
+                date={item.created_at}
+                text={item.content}
+                title={item.title}
+                image={item.image_url}
+                likes={item.likes_count}
+                type={item.type}
+                tags={item.tags}
+                isLiked={item.liked_by?.includes(userData?.email)} 
+                onLike={() => handleLike(item._id)}
+              />
+            )}
+            style={{ marginBottom: 16 }}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
         )}
 
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
-            <Text>📷 Add Image</Text>
-          </TouchableOpacity>
+        {/* CREATE POST SECTION */}
+        <View style={styles.createPost}>
+          <Text style={styles.sectionTitle}>Create a Post</Text>
+          
+          {/* 1. NEW: Horizontal Scroll for Type Selection */}
+          <View style={{ marginBottom: 10 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {POST_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  onPress={() => setNewType(type)}
+                  style={[
+                    styles.typeChip,
+                    newType === type && styles.activeTypeChip
+                  ]}
+                >
+                  <Text style={[
+                    styles.typeText,
+                    newType === type && styles.activeTypeText
+                  ]}>
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+          
+          <TextInput 
+            placeholder="Title (Optional)" 
+            style={styles.input} 
+            value={newTitle}
+            onChangeText={setNewTitle}
+          />
+          
+          <TextInput
+            placeholder="What's on your mind?"
+            style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
+            multiline
+            value={newContent}
+            onChangeText={setNewContent}
+          />
 
-          <TouchableOpacity 
-            style={[styles.postBtn, isPosting && { opacity: 0.7 }]} 
-            onPress={handleCreatePost}
-            disabled={isPosting}
-          >
-            {isPosting ? <ActivityIndicator color="#fff" size="small"/> : <Text style={styles.postBtnText}>Post</Text>}
-          </TouchableOpacity>
+          <TextInput 
+              placeholder="Tags (comma separated: python, react)" 
+              style={styles.input} 
+              value={newTags}
+              onChangeText={setNewTags}
+            />
+
+          {selectedImage && (
+            <View style={{ marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={{ uri: selectedImage.uri }} style={{ width: 50, height: 50, borderRadius: 8, marginRight: 10 }} />
+              <TouchableOpacity onPress={() => setSelectedImage(null)}>
+                <Text style={{ color: 'red', fontSize: 12 }}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
+              <Text>📷 Photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.postBtn, isPosting && { opacity: 0.7 }]} 
+              onPress={handleCreatePost}
+              disabled={isPosting}
+            >
+              {isPosting ? <ActivityIndicator color="#fff" size="small"/> : <Text style={styles.postBtnText}>Post</Text>}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
+function Post({ id, name, date, text, title, image, likes, type, tags, isLiked, onLike }) {
+  const formattedDate = new Date(date).toLocaleDateString();
 
-function Post({ name, date, text, title, image, likes }) {
   return (
     <View style={styles.post}>
       <View style={styles.header}>
         <View style={styles.avatarPlaceholder} />
         <View>
             <Text style={styles.bold}>{name}</Text>
-            <Text style={styles.muted}>{date}</Text>
+            <View style={{flexDirection:'row', alignItems:'center'}}>
+              <Text style={styles.muted}>{formattedDate}</Text>
+              {/* Badge for Type in the Post Header */}
+              <View style={styles.postTypeBadge}>
+                <Text style={styles.postTypeText}>{type}</Text>
+              </View>
+            </View>
         </View>
       </View>
       
       {title ? <Text style={styles.postTitle}>{title}</Text> : null}
       <Text style={styles.postText}>{text}</Text>
       
-      {image ? (
+      {image && image !== "" ? (
         <Image 
           source={{ uri: image }} 
           style={styles.postImage} 
@@ -214,72 +340,111 @@ function Post({ name, date, text, title, image, likes }) {
         />
       ) : null}
 
-      <Text style={styles.likes}>❤️ {likes} Likes</Text>
+      <View style={styles.footer}>
+          <View style={styles.tagRow}>
+            {tags && tags.map((tag, index) => (
+                <Text key={index} style={styles.hashTag}>#{tag} </Text>
+            ))}
+          </View>
+         <TouchableOpacity 
+            style={styles.likeBtn} 
+            onPress={onLike}
+          >
+            <Text style={{fontSize: 16, fontWeight: isLiked ? 'bold' : 'normal'}}>
+              {isLiked ? "❤️" : "🤍"} {likes}
+            </Text>
+          </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toDateString();
-};
-
 const styles = StyleSheet.create({
-  shareBtn: {
-    backgroundColor: "#10b981",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
-    alignSelf: 'flex-start'
-  },
-  shareText: { color: "#fff", fontWeight: "600" },
+  // ... Same styles as before ...
   post: {
     backgroundColor: "#fafafa",
     padding: 14,
     borderRadius: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#eee'
+    borderColor: '#eee',
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   avatarPlaceholder: { width: 35, height: 35, borderRadius: 20, backgroundColor: '#ddd', marginRight: 10 },
   muted: { color: "#777", fontSize: 12 },
   bold: { fontWeight: "700", fontSize: 14 },
+  
+  // NEW STYLES FOR POST TYPE BADGE
+  postTypeBadge: { 
+    backgroundColor: '#e0f2fe', 
+    paddingHorizontal: 6, 
+    paddingVertical: 2, 
+    borderRadius: 4, 
+    marginLeft: 8 
+  },
+  postTypeText: { fontSize: 10, color: '#0ea5e9', fontWeight: 'bold' },
+
   postTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 4, marginTop: 4 },
   postText: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 8 },
-  postImage: { width: '100%', height: 200, borderRadius: 10, marginBottom: 10, marginTop: 5 },
-  likes: { color: "#555", fontSize: 13, marginTop: 5 },
-  
+  postImage: { width: '100%', height: 200, borderRadius: 10, marginBottom: 10, marginTop: 5, backgroundColor: '#eee' },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', maxWidth: '75%' },
+  hashTag: { color: "#3b82f6", fontSize: 12 },
+  likeBtn: { padding: 5 },
+
   // Create Post Styles
   createPost: {
-    backgroundColor: "#f0fdf4", // Light green tint
+    backgroundColor: "#f0fdf4", 
     padding: 14,
     borderRadius: 14,
-    marginTop: 'auto', // Pushes to bottom if flex is used
     borderTopWidth: 1,
     borderColor: '#ddd'
   },
   sectionTitle: { fontWeight: 'bold', marginBottom: 10, color: '#333' },
+  
+  // NEW STYLES FOR TYPE SELECTION CHIPS
+  typeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 8,
+  },
+  activeTypeChip: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
+  typeText: { fontSize: 12, color: '#555' },
+  activeTypeText: { color: '#fff', fontWeight: 'bold' },
+
   input: {
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 10,
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: '#e5e7eb',
+    fontSize: 14
   },
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
   imageBtn: {
     backgroundColor: "#e5e7eb",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
   postBtn: {
     backgroundColor: "#10b981",
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 20,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   postBtnText: { color: '#fff', fontWeight: 'bold' }
 });

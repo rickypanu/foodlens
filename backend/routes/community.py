@@ -14,7 +14,6 @@ from database import communitypost
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 # --- Helpers & Models ---
-
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class PostModel(BaseModel):
@@ -27,11 +26,10 @@ class PostModel(BaseModel):
     image_url: Optional[str] = None
     tags: List[str] = []
     is_public: bool = True
+    liked_by: List[str] = [] 
     likes_count: int = 0
-    comments_count: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-# Ensure this matches the JSON sent from React Native
 class CreatePostRequest(BaseModel):
     user_id: str
     user_name: str
@@ -39,14 +37,13 @@ class CreatePostRequest(BaseModel):
     title: Optional[str] = ""
     content: str
     image_url: Optional[str] = ""
-    tags: str # We receive tags as a comma string, then process them
+    tags: str 
     is_public: bool = True
 
 # --- Routes ---
 
 # 1. Upload Image
 UPLOAD_DIR = "static/uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
@@ -58,7 +55,7 @@ async def upload_image(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        # Update this IP if you are not using localhost for accessing the image
+        # REPLACE THIS IP with your machine's actual IP address
         return {"file_url": f"http://192.168.136.55:8000/static/uploads/{filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -66,7 +63,6 @@ async def upload_image(file: UploadFile = File(...)):
 # 2. Create Post
 @router.post("/", response_model=PostModel)
 async def create_post(post: CreatePostRequest):
-    # Process tags
     tag_list = [t.strip() for t in post.tags.split(',') if t.strip()]
     
     new_post = PostModel(
@@ -92,3 +88,41 @@ async def get_feed(limit: int = 20):
         .limit(limit) \
         .to_list(limit)
     return posts
+
+class LikeRequest(BaseModel):
+    user_id: str
+
+# 4. Like Post (NEW)
+@router.put("/{post_id}/like")
+async def toggle_like(post_id: str, like_data: LikeRequest):
+    if not ObjectId.is_valid(post_id):
+        raise HTTPException(status_code=400, detail="Invalid ID")
+
+    # A. Find the post first
+    post = await communitypost.find_one({"_id": ObjectId(post_id)})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    user_id = like_data.user_id
+    
+    # B. Check if user already liked it
+    if user_id in post.get("liked_by", []):
+        # UNLIKE: Pull user from list, decrement count
+        await communitypost.update_one(
+            {"_id": ObjectId(post_id)},
+            {
+                "$pull": {"liked_by": user_id},
+                "$inc": {"likes_count": -1}
+            }
+        )
+        return {"status": "unliked"}
+    else:
+        # LIKE: Add user to list, increment count
+        await communitypost.update_one(
+            {"_id": ObjectId(post_id)},
+            {
+                "$addToSet": {"liked_by": user_id},
+                "$inc": {"likes_count": 1}
+            }
+        )
+        return {"status": "liked"}
