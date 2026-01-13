@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import user_routes, addmeal, community, profile
 import uvicorn
+from datetime import date
 
 app = FastAPI(title="Healthplate API")
 
@@ -30,6 +31,13 @@ app.include_router(profile.router)
 async def root():
     return {"message": "Healthplate Backend is Running"}
 
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health():
+    return {
+        "status": "ok",
+        "uptime": time.process_time(),
+        "timestamp": time.time(),
+    }
 # if __name__ == "__main__":
 #     # Using 0.0.0.0 allows your physical phone to connect via your laptop's IP address
 #     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

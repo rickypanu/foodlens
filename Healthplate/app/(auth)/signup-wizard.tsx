@@ -94,42 +94,57 @@ export default function SignupWizard() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Prepare payload (convert strings to numbers)
+      // Prepare payload
       const payload = {
         ...form,
         age: parseInt(form.age) || 0,
         height: parseFloat(form.height) || 0,
         weight: parseFloat(form.weight) || 0,
-        // Convert comma-separated strings to arrays if needed, or keep as arrays
         allergies: form.allergies ? form.allergies.split(",") : [],
         disliked_food: form.disliked_food ? form.disliked_food.split(",") : [],
       };
 
+      console.log("Sending Payload:", payload);
+
       // API Call
       const res = await api.post("/users/signup", payload);
 
-      // Success: Move to Goal Summary
-      // We pass the calculated metrics as a string param
-      router.push({
-        pathname: "/(auth)/goal-summary",
+      // --- DEBUG LOGGING (Check your terminal for this) ---
+      console.log("API STATUS:", res.status);
+      console.log("API DATA:", JSON.stringify(res.data, null, 2));
+
+      // --- SAFETY CHECKS ---
+      // We use '|| {}' to prevent crashes if data is missing
+      const userData = res.data?.user || {};
+      const metrics = userData?.metrics || {};
+      const token = res.data?.token || "";
+
+      // Only navigate if we actually got a response, otherwise show alert
+      if (!res.data) {
+        Alert.alert("Error", "Server returned an empty response.");
+        return;
+      }
+
+      console.log("Navigating to Goal Summary...");
+
+      router.replace({
+        pathname: "/goal-summary",
         params: {
-          goals: JSON.stringify(res.data.user.metrics),
-          // ADD THESE TWO LINES:
-          token: res.data.token,
-          user: JSON.stringify(res.data.user),
+          goals: JSON.stringify(metrics),
+          token: token,
+          user: JSON.stringify(userData),
         },
       });
     } catch (error: any) {
-      console.log(error);
+      console.error("Signup Error Object:", error);
       Alert.alert(
         "Signup Failed",
-        error.response?.data?.detail || "Something went wrong"
+        error.response?.data?.detail || error.message || "Something went wrong"
       );
     } finally {
       setLoading(false);
     }
   };
-
   // --- Render Functions ---
 
   const renderOptionBtn = (

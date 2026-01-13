@@ -7,7 +7,7 @@ const PremiumPlanScreen = () => {
     <View style={styles.container}>
       {/* Crown Icon */}
       <Image
-        source={require('@/assets/images/crown.png')} // Replace with your actual crown icon path
+        source={require('@/assets/images/crown.jpeg')} // Replace with your actual crown icon path
         style={styles.icon}
       />
 

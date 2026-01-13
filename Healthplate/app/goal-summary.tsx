@@ -16,7 +16,7 @@ export default function GoalSummary() {
   const handleContinue = () => {
     // Pass the credentials forward to the subscription page
     router.push({ 
-      pathname: '/(auth)/subscribe',
+      pathname: '/SubscriptionChoice',
       params: { token, user } 
     });
   };
@@ -59,7 +59,7 @@ export default function GoalSummary() {
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.btn} onPress={handleContinue}>
-          <Text style={styles.btnText}>View Plans</Text>
+          <Text style={styles.btnText}>Continue </Text>
           <Ionicons name="arrow-forward" size={20} color="#fff" />
         </TouchableOpacity>
       </View>

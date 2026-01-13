@@ -112,7 +112,7 @@ const fetchDailyStats = async () => {
       </View>
 
       {/* GREETING */}
-      <Text style={styles.greeting}>Hey {userData?.name || "Student"}! 👋</Text>
+      <Text style={styles.greeting}>Hey {userData?.name || "Unknown"}! 👋</Text>
       <Text style={styles.date}>{today}</Text>
 
       {/* HEALTH TIP */}
