@@ -53,7 +53,7 @@ const fetchDailyStats = async () => {
       const dateStr = new Date().toISOString().split('T')[0];
 
       // 3. Request with BACKTICKS (key change here)
-      console.log(`Fetching stats for: ${userEmail}`); // Debug log
+      // console.log(`Fetching stats for: ${userEmail}`); // Debug log
       const response = await api.get(`/users/${userEmail}/daily-stats?date_str=${dateStr}`);
       
       setStats(response.data);
