@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,426 +6,491 @@ import {
   TouchableOpacity,
   Dimensions,
   StyleSheet,
-  Platform
+  Modal,
+  TextInput,
+  Alert
 } from 'react-native';
-import { LineChart } from "react-native-gifted-charts";
-import {
-  Calendar as CalendarIcon,
-  ChevronDown,
-  ArrowUpRight,
-  ArrowDownRight,
-  Flame,
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react-native';
+import { LineChart, BarChart } from "react-native-gifted-charts";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CustomHeader from '@/src/components/header';
+import { 
+  Calendar as CalendarIcon, 
+  ChevronDown, 
+  ArrowUp, 
+  ArrowDown, 
+  Flame, 
+  Check, 
+  X, 
+  AlertTriangle, 
+  Activity, 
+  Scale, 
+  Target,
+  Plus
+} from 'lucide-react-native';
+import { subDays, differenceInDays, parseISO, format } from 'date-fns';
 
 const screenWidth = Dimensions.get('window').width;
 
-/* ---------------- Mock Data ---------------- */
-const lineData = [
-  { value: 2100, label: 'Mon', dataPointText: '2.1k' },
-  { value: 2300, label: 'Tue', dataPointText: '2.3k' },
-  { value: 1800, label: 'Wed', dataPointText: '1.8k' },
-  { value: 2400, label: 'Thu', dataPointText: '2.4k' },
-  { value: 2550, label: 'Fri', dataPointText: '2.5k' },
-  { value: 1900, label: 'Sat', dataPointText: '1.9k' },
-  { value: 2150, label: 'Sun', dataPointText: '2.1k' },
-];
+/* -------------------------------------------------------------------------- */
+/* MOCK DATA GENERATORS (Replace these with your DB calls later)              */
+/* -------------------------------------------------------------------------- */
 
-const historyLogs = [
-  { id: 1, day: 'Sunday', date: 'Jan 11', calories: 2150, goal: 2200, status: 'success' },
-  { id: 2, day: 'Saturday', date: 'Jan 10', calories: 1900, goal: 2200, status: 'warning' },
-  { id: 3, day: 'Friday', date: 'Jan 09', calories: 2550, goal: 2200, status: 'danger' },
-  { id: 4, day: 'Thursday', date: 'Jan 08', calories: 2400, goal: 2200, status: 'warning' },
-  { id: 5, day: 'Wednesday', date: 'Jan 07', calories: 1800, goal: 2200, status: 'success' },
-];
+const generateMockMeals = () => Array.from({ length: 14 }).map((_, i) => ({
+  date: format(subDays(new Date(), i), 'yyyy-MM-dd'),
+  calories: 2000 + Math.random() * 500,
+  protein: 120 + Math.random() * 40,
+  carbs: 200 + Math.random() * 50,
+  fat: 60 + Math.random() * 20,
+  fiber: 20 + Math.random() * 15,
+  sodium: 2000 + Math.random() * 500,
+})).reverse();
 
-/* ---------------- Main Screen ---------------- */
+const generateMockWeights = () => Array.from({ length: 5 }).map((_, i) => ({
+  date: format(subDays(new Date(), i * 3), 'yyyy-MM-dd'),
+  weight_kg: 75 - (i * 0.2)
+})).reverse();
+
+const MOCK_PROFILE = {
+  calorie_target_low: 1800,
+  calorie_target_high: 2200,
+  protein_target: 150,
+  fiber_target_low: 30,
+  sodium_cap: 2300,
+};
+
+/* -------------------------------------------------------------------------- */
+/* MAIN COMPONENT                               */
+/* -------------------------------------------------------------------------- */
 
 export default function AnalyticsHistory() {
+  const [activeTab, setActiveTab] = useState('today'); // 'today', 'trends', 'insights'
+  const [range, setRange] = useState('30d');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newWeight, setNewWeight] = useState('');
 
-  const [range, setRange] = useState('Last 7 Days');
+  // Local State for Data
+  const [profile, setProfile] = useState(null);
+  const [dailyNutrition, setDailyNutrition] = useState([]);
+  const [weightLogs, setWeightLogs] = useState([]);
+
+  // Simulate Fetching Data
+  useEffect(() => {
+    // In a real app, fetch from database here
+    setProfile(MOCK_PROFILE);
+    setDailyNutrition(generateMockMeals());
+    setWeightLogs(generateMockWeights());
+  }, []);
+
+  // --- Logic Engine ---
+
+  // 1. Goal Adherence Calculation
+  const goalAdherence = useMemo(() => {
+    return dailyNutrition.map(day => {
+      if (!profile) return { date: day.date, score: 0 };
+      const caloriesOk = day.calories >= profile.calorie_target_low && day.calories <= profile.calorie_target_high * 1.1;
+      const proteinOk = day.protein >= profile.protein_target * 0.9;
+      const fiberOk = day.fiber >= profile.fiber_target_low;
+      const sodiumOk = day.sodium <= profile.sodium_cap;
+      const score = [caloriesOk, proteinOk, fiberOk, sodiumOk].filter(Boolean).length / 4 * 100;
+      return { date: day.date, score: Math.round(score), caloriesOk, proteinOk, fiberOk, sodiumOk };
+    });
+  }, [dailyNutrition, profile]);
+
+  // 2. Predictions (Linear Regression)
+  const predictions = useMemo(() => {
+    if (dailyNutrition.length < 7) return null;
+    const recent7 = dailyNutrition.slice(-7);
+    const avgLast7 = recent7.reduce((a, b) => a + b.calories, 0) / 7;
+    const prev7 = dailyNutrition.slice(-14, -7);
+    const avgPrev7 = prev7.length ? prev7.reduce((a, b) => a + b.calories, 0) / prev7.length : avgLast7;
+    const trend = avgLast7 - avgPrev7;
+    return { avgLast7, avgPrev7, trend, next7: avgLast7 + trend };
+  }, [dailyNutrition]);
+
+  // 3. Weight Trend
+  const weightTrend = useMemo(() => {
+    if(weightLogs.length < 2) return null;
+    const recent = weightLogs.slice(-5);
+    const days = differenceInDays(parseISO(recent[recent.length-1].date), parseISO(recent[0].date));
+    const totalChange = recent[recent.length-1].weight_kg - recent[0].weight_kg;
+    const dailyChange = totalChange / (days || 1);
+    return { current: recent[recent.length-1].weight_kg, dailyChange, predicted7: recent[recent.length-1].weight_kg + (dailyChange * 7) };
+  }, [weightLogs]);
+
+  // --- Render ---
+
+  if (!profile) return null; // or Loading spinner
+
+  const todayData = dailyNutrition[dailyNutrition.length - 1] || {};
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
-      <CustomHeader/>
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1 }}>
         
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Analytics</Text>
-          
-          <TouchableOpacity style={styles.datePickerButton}>
-            <CalendarIcon size={14} color="#64748b" style={{ marginRight: 6 }} />
-            <Text style={styles.datePickerText}>{range}</Text>
+          <View>
+            <Text style={styles.headerTitle}>Progress</Text>
+            <Text style={styles.headerSubtitle}>Track your health journey</Text>
+          </View>
+          <TouchableOpacity style={styles.rangeButton}>
+            <CalendarIcon size={14} color="#64748b" />
+            <Text style={styles.rangeText}>{range}</Text>
             <ChevronDown size={14} color="#64748b" />
           </TouchableOpacity>
         </View>
 
-        {/* 1. Trend Chart Card */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.card}>
-            <View style={styles.chartHeader}>
-              <Text style={styles.label}>Calorie Trend</Text>
-              <View style={styles.chartValueContainer}>
-                 <Text style={styles.bigNumber}>2,154</Text>
-                 <Text style={styles.unitText}>avg kcal</Text>
+        {/* Custom Tabs */}
+        <View style={styles.tabContainer}>
+          {['today', 'trends', 'insights'].map((tab) => (
+            <TouchableOpacity 
+              key={tab} 
+              onPress={() => setActiveTab(tab)}
+              style={[styles.tab, activeTab === tab && styles.activeTab]}
+            >
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          {/* ---------------- TODAY TAB ---------------- */}
+          {activeTab === 'today' && (
+            <View style={styles.gridContainer}>
+              {/* Calories Card */}
+              <View style={[styles.card, styles.halfCard, { backgroundColor: '#fff7ed', borderColor: '#ffedd5' }]}>
+                <View style={styles.cardHeader}>
+                  <Flame size={20} color="#f97316" fill="#f97316" />
+                  <Text style={styles.cardValue}>{Math.round(todayData.calories || 0)}</Text>
+                </View>
+                <Text style={styles.cardLabel}>Calories</Text>
+                <Text style={styles.cardSub}>Target: {profile.calorie_target_low}-{profile.calorie_target_high}</Text>
+              </View>
+
+              {/* Protein Card */}
+              <View style={[styles.card, styles.halfCard, { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }]}>
+                <View style={styles.cardHeader}>
+                  <Activity size={20} color="#ef4444" />
+                  <Text style={styles.cardValue}>{Math.round(todayData.protein || 0)}g</Text>
+                </View>
+                <Text style={styles.cardLabel}>Protein</Text>
+                <Text style={styles.cardSub}>Target: {profile.protein_target}g</Text>
+              </View>
+
+              {/* Fiber Card */}
+              <View style={[styles.card, styles.halfCard, { backgroundColor: '#fffbeb', borderColor: '#fef3c7' }]}>
+                <View style={styles.cardHeader}>
+                  <Activity size={20} color="#d97706" />
+                  <Text style={styles.cardValue}>{Math.round(todayData.fiber || 0)}g</Text>
+                </View>
+                <Text style={styles.cardLabel}>Fiber</Text>
+                <Text style={styles.cardSub}>Target: {profile.fiber_target_low}g</Text>
+              </View>
+
+              {/* Sodium Card */}
+              <View style={[styles.card, styles.halfCard, { backgroundColor: '#eff6ff', borderColor: '#dbeafe' }]}>
+                <View style={styles.cardHeader}>
+                  <AlertTriangle size={20} color="#3b82f6" />
+                  <Text style={styles.cardValue}>{Math.round(todayData.sodium || 0)}</Text>
+                </View>
+                <Text style={styles.cardLabel}>Sodium</Text>
+                <Text style={styles.cardSub}>Cap: {profile.sodium_cap}mg</Text>
+              </View>
+
+              {/* Adherence Score */}
+              <View style={[styles.card, { width: '100%' }]}>
+                <View style={styles.rowBetween}>
+                  <View style={styles.row}>
+                    <Target size={20} color="#4f46e5" />
+                    <Text style={styles.sectionTitle}>Daily Goal Adherence</Text>
+                  </View>
+                  <Text style={styles.scoreText}>
+                    {goalAdherence[goalAdherence.length-1]?.score || 0}%
+                  </Text>
+                </View>
+                
+                <View style={styles.checklist}>
+                  <CheckItem label="Calories" passed={goalAdherence[goalAdherence.length-1]?.caloriesOk} />
+                  <CheckItem label="Protein" passed={goalAdherence[goalAdherence.length-1]?.proteinOk} />
+                  <CheckItem label="Fiber" passed={goalAdherence[goalAdherence.length-1]?.fiberOk} />
+                  <CheckItem label="Sodium" passed={goalAdherence[goalAdherence.length-1]?.sodiumOk} />
+                </View>
               </View>
             </View>
+          )}
 
-            <LineChart
-              data={lineData}
-              color="#6366f1"
-              thickness={3}
-              dataPointsColor="#6366f1"
-              dataPointsRadius={4}
-              width={screenWidth - 80}
-              height={180}
-              curved
-              isAnimated
-              hideRules
-              yAxisThickness={0}
-              xAxisThickness={0}
-              xAxisLabelTextStyle={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}
-              hideYAxisText
-              startFillColor="rgba(99, 102, 241, 0.2)"
-              endFillColor="rgba(99, 102, 241, 0.01)"
-              startOpacity={0.9}
-              endOpacity={0.1}
-              areaChart
-            />
+          {/* ---------------- TRENDS TAB ---------------- */}
+          {activeTab === 'trends' && (
+            <View style={styles.sectionContainer}>
+              <View style={styles.card}>
+                <Text style={styles.chartTitle}>Calorie History</Text>
+                <LineChart
+                  data={dailyNutrition.map(d => ({ value: d.calories, label: d.date.slice(5) }))}
+                  color="#f97316"
+                  thickness={3}
+                  startFillColor="rgba(249, 115, 22, 0.2)"
+                  endFillColor="rgba(249, 115, 22, 0.01)"
+                  startOpacity={0.9}
+                  endOpacity={0.1}
+                  areaChart
+                  curved
+                  hideRules
+                  hideYAxisText
+                  height={180}
+                  width={screenWidth - 80}
+                  spacing={40}
+                  initialSpacing={10}
+                />
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.chartTitle}>Macro Distribution (Avg)</Text>
+                <BarChart
+                  data={dailyNutrition.map(d => ({ 
+                    value: d.protein, 
+                    label: d.date.slice(8),
+                    frontColor: '#ef4444' 
+                  }))}
+                  barWidth={12}
+                  spacing={20}
+                  roundedTop
+                  hideRules
+                  xAxisThickness={0}
+                  yAxisThickness={0}
+                  hideYAxisText
+                  height={150}
+                  width={screenWidth - 80}
+                  labelTextStyle={{fontSize: 10, color: '#94a3b8'}}
+                />
+                <Text style={{textAlign: 'center', fontSize: 10, color: '#94a3b8', marginTop: 10}}>Daily Protein Intake (g)</Text>
+              </View>
+            </View>
+          )}
+
+          {/* ---------------- INSIGHTS TAB ---------------- */}
+          {activeTab === 'insights' && (
+            <View style={styles.sectionContainer}>
+              
+              {/* Calorie Prediction */}
+              {predictions && (
+                <View style={styles.card}>
+                  <View style={styles.row}>
+                    <Activity size={20} color="#8b5cf6" />
+                    <Text style={styles.sectionTitle}>7-Day Forecast</Text>
+                  </View>
+                  
+                  <View style={styles.predictionBox}>
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.textGray}>Current 7-day avg</Text>
+                      <Text style={styles.textBold}>{Math.round(predictions.avgLast7)} kcal</Text>
+                    </View>
+                    <View style={[styles.rowBetween, {marginTop: 8}]}>
+                      <Text style={styles.textGray}>Trend</Text>
+                      <View style={styles.row}>
+                        {predictions.trend > 0 ? <ArrowUp size={16} color="#f97316"/> : <ArrowDown size={16} color="#10b981"/>}
+                        <Text style={{fontWeight: 'bold', marginLeft: 4}}>
+                          {predictions.trend > 0 ? '+' : ''}{Math.round(predictions.trend)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.insightNote}>
+                    <Text style={styles.insightText}>
+                      Based on your current pace, your next week's average will be approx 
+                      <Text style={{fontWeight: 'bold'}}> {Math.round(predictions.next7)} kcal/day</Text>.
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Weight Trajectory */}
+              <View style={styles.card}>
+                <View style={styles.rowBetween}>
+                  <View style={styles.row}>
+                    <Scale size={20} color="#ec4899" />
+                    <Text style={styles.sectionTitle}>Weight Trajectory</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
+                    <Plus size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+
+                {weightTrend ? (
+                  <View style={{marginTop: 16}}>
+                     <View style={styles.rowBetween}>
+                        <View>
+                          <Text style={styles.textGray}>Current</Text>
+                          <Text style={styles.bigNumber}>{weightTrend.current}kg</Text>
+                        </View>
+                        <View>
+                           <Text style={styles.textGray}>Forecast (7d)</Text>
+                           <Text style={[styles.bigNumber, {color: '#8b5cf6'}]}>
+                             {weightTrend.predicted7.toFixed(1)}kg
+                           </Text>
+                        </View>
+                     </View>
+                     <Text style={[styles.textSmall, {marginTop: 12}]}>
+                       Trending {weightTrend.dailyChange > 0 ? 'up' : 'down'} by {Math.abs(weightTrend.dailyChange).toFixed(2)} kg/day
+                     </Text>
+                  </View>
+                ) : (
+                  <Text style={{padding: 20, textAlign: 'center', color: '#94a3b8'}}>Not enough weight data.</Text>
+                )}
+              </View>
+
+            </View>
+          )}
+
+        </ScrollView>
+        
+        {/* Weight Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Log Weight</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Weight in kg" 
+                keyboardType="numeric"
+                value={newWeight}
+                onChangeText={setNewWeight}
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.btn, styles.btnCancel]}>
+                   <Text style={{color: '#64748b'}}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => {
+                   // Mock Save
+                   Alert.alert("Saved", "Weight logged successfully (Mock)");
+                   setModalVisible(false);
+                   setNewWeight('');
+                }} style={[styles.btn, styles.btnSave]}>
+                   <Text style={{color: 'white', fontWeight: 'bold'}}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
+        </Modal>
 
-        {/* 2. Key Statistics Grid */}
-        <View style={styles.statsGrid}>
-          <StatCard 
-            label="Weekly Total" 
-            value="15,080" 
-            unit="kcal" 
-            trend="+2.4%" 
-            isPositive={false} 
-          />
-          <StatCard 
-            label="Adherence" 
-            value="85" 
-            unit="%" 
-            trend="+12%" 
-            isPositive={true} 
-          />
-        </View>
-
-        {/* 3. Detailed History List */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>History Logs</Text>
-          <View style={styles.listContainer}>
-            {historyLogs.map((log) => (
-              <HistoryItem key={log.id} item={log} />
-            ))}
-          </View>
-        </View>
-
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
     </View>
   );
 }
 
-/* ---------------- Sub-Components ---------------- */
+/* -------------------------------------------------------------------------- */
+/* SUB COMPONENTS                                */
+/* -------------------------------------------------------------------------- */
 
-function StatCard({ label, value, unit, trend, isPositive }) {
+function CheckItem({ label, passed }) {
   return (
-    <View style={[styles.card, styles.statCard]}>
-      <Text style={styles.labelSmall}>{label}</Text>
-      
-      <View style={styles.statValueContainer}>
-        <Text style={styles.statNumber}>{value}</Text>
-        <Text style={styles.statUnit}>{unit}</Text>
-      </View>
-
-      <View style={[styles.trendBadge, isPositive ? styles.trendUp : styles.trendDown]}>
-        {isPositive ? (
-          <ArrowUpRight size={12} color="#10b981" />
-        ) : (
-          <ArrowDownRight size={12} color="#f43f5e" />
-        )}
-        <Text style={[styles.trendText, isPositive ? styles.textSuccess : styles.textDanger]}>
-          {trend}
-        </Text>
-      </View>
+    <View style={[styles.checkItem, passed ? {backgroundColor: '#f0fdf4'} : {backgroundColor: '#fef2f2'}]}>
+      <Text style={styles.checkLabel}>{label}</Text>
+      {passed ? <Check size={16} color="#16a34a" /> : <X size={16} color="#dc2626" />}
     </View>
   );
 }
 
-function HistoryItem({ item }) {
-  const getStatusStyles = (status) => {
-    switch(status) {
-      case 'success': return { bg: '#ecfdf5', text: '#059669', icon: '#10b981' }; // emerald-50
-      case 'warning': return { bg: '#fffbeb', text: '#d97706', icon: '#f59e0b' }; // amber-50
-      case 'danger': return { bg: '#fff1f2', text: '#e11d48', icon: '#f43f5e' }; // rose-50
-      default: return { bg: '#f8fafc', text: '#475569', icon: '#64748b' };
-    }
-  };
-
-  const statusStyle = getStatusStyles(item.status);
-
-  return (
-    <TouchableOpacity style={styles.historyItem}>
-      <View style={styles.historyLeft}>
-        <View style={styles.dateBox}>
-          <Text style={styles.dateMonth}>{item.date.split(' ')[0]}</Text>
-          <Text style={styles.dateDay}>{item.date.split(' ')[1]}</Text>
-        </View>
-
-        <View>
-          <Text style={styles.historyDayTitle}>{item.day}</Text>
-          <View style={styles.historyMeta}>
-            <Flame size={12} color="#94a3b8" strokeWidth={3} />
-            <Text style={styles.historyMetaText}>
-              {item.calories} / {item.goal} kcal
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-        {item.status === 'success' ? (
-           <CheckCircle2 size={12} color={statusStyle.icon} />
-        ) : (
-           <AlertCircle size={12} color={statusStyle.icon} />
-        )}
-        <Text style={[styles.statusText, { color: statusStyle.text }]}>
-          {item.status === 'success' ? 'Good' : item.status === 'danger' ? 'Over' : 'Under'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-/* ---------------- STYLESHEET ---------------- */
+/* -------------------------------------------------------------------------- */
+/* STYLES                                    */
+/* -------------------------------------------------------------------------- */
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC', // Slate-50 background
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 16,
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b', // Slate-800
-  },
-  datePickerButton: {
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b' },
+  headerSubtitle: { fontSize: 12, color: '#64748b' },
+  rangeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: '#fff',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-  },
-  datePickerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-    marginRight: 4,
-  },
-
-  // Common Card Styles
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
     borderWidth: 1,
-    borderColor: '#f1f5f9', // Slate-100
-    // Soft Shadow
-    shadowColor: "#64748b",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    borderColor: '#e2e8f0',
   },
-  sectionContainer: {
-    paddingHorizontal: 24,
-  },
-
-  // Chart Styles
-  chartHeader: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#94a3b8', // Slate-400
-    marginBottom: 4,
-  },
-  chartValueContainer: {
+  rangeText: { marginHorizontal: 6, fontSize: 12, fontWeight: '600', color: '#475569' },
+  
+  // Tabs
+  tabContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    marginHorizontal: 24,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
   },
-  bigNumber: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#1e293b',
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 10,
   },
-  unitText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-    marginBottom: 6,
-    marginLeft: 8,
-  },
+  activeTab: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  tabText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
+  activeTabText: { color: '#0f172a' },
 
-  // Stats Grid
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    marginBottom: 32,
-  },
-  statCard: {
-    width: '48%',
+  // Grid & Cards
+  scrollContent: { paddingBottom: 40 },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 24, gap: 12 },
+  sectionContainer: { paddingHorizontal: 24, gap: 16 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
     padding: 16,
-  },
-  labelSmall: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  statValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
     marginBottom: 12,
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#1e293b',
-  },
-  statUnit: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-    marginLeft: 4,
-  },
-  trendBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  trendUp: {
-    backgroundColor: '#ecfdf5', // emerald-50
-  },
-  trendDown: {
-    backgroundColor: '#fff1f2', // rose-50
-  },
-  trendText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginLeft: 4,
-  },
-  textSuccess: {
-    color: '#059669',
-  },
-  textDanger: {
-    color: '#e11d48',
-  },
+  halfCard: { width: '48%' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  cardValue: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
+  cardLabel: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  cardSub: { fontSize: 10, color: '#94a3b8', marginTop: 4 },
 
-  // History List
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 16,
-  },
-  listContainer: {
-    gap: 12, // React Native 0.71+ supports gap
-  },
-  historyItem: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  historyLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateBox: {
-    backgroundColor: '#f8fafc',
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  dateMonth: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-  },
-  dateDay: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#1e293b',
-  },
-  historyDayTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  historyMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  historyMetaText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#94a3b8',
-    marginLeft: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginLeft: 4,
-    textTransform: 'uppercase',
-  },
+  // List & Typography
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e293b', marginLeft: 8 },
+  scoreText: { fontSize: 24, fontWeight: 'bold', color: '#4f46e5' },
+  checklist: { marginTop: 16, gap: 8 },
+  checkItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, borderRadius: 12 },
+  checkLabel: { fontSize: 12, fontWeight: '500', color: '#334155' },
+  
+  // Charts
+  chartTitle: { fontSize: 14, fontWeight: '600', color: '#64748b', marginBottom: 20 },
+  
+  // Insights
+  predictionBox: { backgroundColor: '#f3f4f6', padding: 12, borderRadius: 12, marginTop: 12 },
+  insightNote: { backgroundColor: '#faf5ff', padding: 12, borderRadius: 12, marginTop: 12, borderWidth: 1, borderColor: '#e9d5ff' },
+  insightText: { fontSize: 12, color: '#6b21a8' },
+  textGray: { fontSize: 12, color: '#64748b' },
+  textBold: { fontSize: 16, fontWeight: 'bold', color: '#1e293b' },
+  bigNumber: { fontSize: 24, fontWeight: '900', color: '#1e293b' },
+  textSmall: { fontSize: 12, color: '#64748b' },
+  addButton: { backgroundColor: '#8b5cf6', borderRadius: 20, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: 'white', width: '80%', padding: 24, borderRadius: 24 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
+  input: { backgroundColor: '#f1f5f9', padding: 12, borderRadius: 12, fontSize: 16, marginBottom: 24 },
+  modalButtons: { flexDirection: 'row', gap: 12 },
+  btn: { flex: 1, padding: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  btnCancel: { backgroundColor: '#f1f5f9' },
+  btnSave: { backgroundColor: '#8b5cf6' },
 });
