@@ -1,39 +1,34 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  TextInput,
-  Alert
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react-native';
-import { subDays, differenceInDays, parseISO, format } from 'date-fns';
-import CustomHeader from '@/src/components/header';
+import React, { useState, useMemo, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Calendar as CalendarIcon, ChevronDown } from "lucide-react-native";
+import { subDays, differenceInDays, parseISO, format } from "date-fns";
+import CustomHeader from "@/src/components/header";
+import { useAuth } from "@/src/context/AuthContext";
+import { api } from "@/src/services/api";
 
-// IMPORT YOUR NEW COMPONENTS
-import TodayTab from '@/src/components/analytics/TodayTab';
-import TrendsTab from '@/src/components/analytics/TrendsTab';
-import InsightsTab from '@/src/components/analytics/InsightsTab';
+// COMPONENTS
+import TodayTab from "@/src/components/analytics/TodayTab";
+import TrendsTab from "@/src/components/analytics/TrendsTab";
+import InsightsTab from "@/src/components/analytics/InsightsTab";
 
-/* ---------------- Mock Data Functions ---------------- */
-const generateMockMeals = () => Array.from({ length: 14 }).map((_, i) => ({
-  date: format(subDays(new Date(), i), 'yyyy-MM-dd'),
-  calories: 2000 + Math.random() * 500,
-  protein: 120 + Math.random() * 40,
-  carbs: 200 + Math.random() * 50,
-  fat: 60 + Math.random() * 20,
-  fiber: 20 + Math.random() * 15,
-  sodium: 2000 + Math.random() * 500,
-})).reverse();
+/* ---------------- Mock Data Functions (Keep existing) ---------------- */
+const generateMockMeals = () =>
+  Array.from({ length: 14 }).map((_, i) => ({
+    date: format(subDays(new Date(), i), "yyyy-MM-dd"),
+    calories: 2000 + Math.random() * 500,
+    protein: 120 + Math.random() * 40,
+    carbs: 200 + Math.random() * 50,
+    fat: 60 + Math.random() * 20,
+    fiber: 20 + Math.random() * 15,
+    sodium: 2000 + Math.random() * 500,
+  })).reverse();
 
-const generateMockWeights = () => Array.from({ length: 5 }).map((_, i) => ({
-  date: format(subDays(new Date(), i * 3), 'yyyy-MM-dd'),
-  weight_kg: 75 - (i * 0.2)
-})).reverse();
+const generateMockWeights = () =>
+  Array.from({ length: 5 }).map((_, i) => ({
+    date: format(subDays(new Date(), i * 3), "yyyy-MM-dd"),
+    weight_kg: 75 - i * 0.2,
+  })).reverse();
 
 const MOCK_PROFILE = {
   calorie_target_low: 1800,
@@ -43,38 +38,59 @@ const MOCK_PROFILE = {
   sodium_cap: 2300,
 };
 
-/* ---------------- Main Component ---------------- */
-
 export default function AnalyticsHistory() {
-  const [activeTab, setActiveTab] = useState('today');
-  const [range, setRange] = useState('30d');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newWeight, setNewWeight] = useState('');
+  const [activeTab, setActiveTab] = useState("today");
+  const [range, setRange] = useState("30d");
 
-  // Local State for Data
+  // Local State
   const [profile, setProfile] = useState(null);
   const [dailyNutrition, setDailyNutrition] = useState([]);
   const [weightLogs, setWeightLogs] = useState([]);
 
-  // Simulate Fetching Data
+  // Auth & Weight API State
+  const { userdata } = useAuth();
+  const [weightHistory, setWeightHistory] = useState([]);
+
+  // 1. Fetch Mock Data on Mount
   useEffect(() => {
     setProfile(MOCK_PROFILE);
     setDailyNutrition(generateMockMeals());
     setWeightLogs(generateMockWeights());
   }, []);
 
-  // --- Logic Engine (Calculations) ---
+  // 2. Fetch Real Weight History from Backend
+  const fetchWeightHistory = async () => {
+    try {
+      // Ensure we have a user ID before calling
+      if (!userdata?._id) return;
+      const response = await api.get(`/users/weight_history/${userdata._id}`);
+      setWeightHistory(response.data.history);
+    } catch (error) {
+      console.error("Failed to load history", error);
+    }
+  };
 
+  useEffect(() => {
+    if (userdata?._id) {
+      fetchWeightHistory();
+    }
+  }, [userdata]);
+
+  // --- Calculations ---
   // 1. Goal Adherence
   const goalAdherence = useMemo(() => {
-    return dailyNutrition.map(day => {
+    return dailyNutrition.map((day) => {
       if (!profile) return { date: day.date, score: 0 };
       const caloriesOk = day.calories >= profile.calorie_target_low && day.calories <= profile.calorie_target_high * 1.1;
       const proteinOk = day.protein >= profile.protein_target * 0.9;
       const fiberOk = day.fiber >= profile.fiber_target_low;
       const sodiumOk = day.sodium <= profile.sodium_cap;
-      const score = [caloriesOk, proteinOk, fiberOk, sodiumOk].filter(Boolean).length / 4 * 100;
-      return { date: day.date, score: Math.round(score), caloriesOk, proteinOk, fiberOk, sodiumOk };
+      const score = ([caloriesOk, proteinOk, fiberOk, sodiumOk].filter(Boolean).length / 4) * 100;
+      return {
+        date: day.date,
+        score: Math.round(score),
+        caloriesOk, proteinOk, fiberOk, sodiumOk,
+      };
     });
   }, [dailyNutrition, profile]);
 
@@ -91,25 +107,28 @@ export default function AnalyticsHistory() {
 
   // 3. Weight Trend
   const weightTrend = useMemo(() => {
-    if(weightLogs.length < 2) return null;
+    if (weightLogs.length < 2) return null;
     const recent = weightLogs.slice(-5);
-    const days = differenceInDays(parseISO(recent[recent.length-1].date), parseISO(recent[0].date));
-    const totalChange = recent[recent.length-1].weight_kg - recent[0].weight_kg;
+    const days = differenceInDays(parseISO(recent[recent.length - 1].date), parseISO(recent[0].date));
+    const totalChange = recent[recent.length - 1].weight_kg - recent[0].weight_kg;
     const dailyChange = totalChange / (days || 1);
-    return { current: recent[recent.length-1].weight_kg, dailyChange, predicted7: recent[recent.length-1].weight_kg + (dailyChange * 7) };
+    return {
+      current: recent[recent.length - 1].weight_kg,
+      dailyChange,
+      predicted7: recent[recent.length - 1].weight_kg + dailyChange * 7,
+    };
   }, [weightLogs]);
 
   if (!profile) return null;
 
-  // Prepare data for Today Tab
   const todayData = dailyNutrition[dailyNutrition.length - 1] || {};
   const currentAdherence = goalAdherence[goalAdherence.length - 1] || {};
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
       <SafeAreaView style={{ flex: 1 }}>
-        <CustomHeader/>
-        
+        <CustomHeader />
+
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -125,9 +144,9 @@ export default function AnalyticsHistory() {
 
         {/* Tab Selector */}
         <View style={styles.tabContainer}>
-          {['today', 'trends', 'insights'].map((tab) => (
-            <TouchableOpacity 
-              key={tab} 
+          {["today", "trends", "insights"].map((tab) => (
+            <TouchableOpacity
+              key={tab}
               onPress={() => setActiveTab(tab)}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
@@ -139,120 +158,36 @@ export default function AnalyticsHistory() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          {activeTab === 'today' && (
-            <TodayTab 
-              data={todayData} 
-              profile={profile} 
-              adherence={currentAdherence} 
-            />
+          {activeTab === "today" && (
+            <TodayTab data={todayData} profile={profile} adherence={currentAdherence} />
           )}
 
-          {activeTab === 'trends' && (
-            <TrendsTab 
-              dailyData={dailyNutrition} 
+          {activeTab === "trends" && <TrendsTab dailyData={dailyNutrition} />}
+
+          {activeTab === "insights" && (
+            <InsightsTab
+              predictions={predictions}
+              weightTrend={weightTrend}
+              weightHistory={weightHistory} // Passed from backend call
+              refreshData={fetchWeightHistory} // Passed refresh function
             />
           )}
-
-          {activeTab === 'insights' && (
-            <InsightsTab 
-              predictions={predictions} 
-              weightTrend={weightTrend} 
-              onAddWeight={() => setModalVisible(true)}
-            />
-          )}
-
         </ScrollView>
-        
-        {/* Weight Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Log Weight</Text>
-              <TextInput 
-                style={styles.input} 
-                placeholder="Weight in kg" 
-                keyboardType="numeric"
-                value={newWeight}
-                onChangeText={setNewWeight}
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.btn, styles.btnCancel]}>
-                   <Text style={{color: '#64748b'}}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => {
-                   Alert.alert("Saved", "Weight logged successfully (Mock)");
-                   setModalVisible(false);
-                   setNewWeight('');
-                }} style={[styles.btn, styles.btnSave]}>
-                   <Text style={{color: 'white', fontWeight: 'bold'}}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
       </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    marginBottom: 20,
-  },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b' },
-  headerSubtitle: { fontSize: 12, color: '#64748b' },
-  rangeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  rangeText: { marginHorizontal: 6, fontSize: 12, fontWeight: '600', color: '#475569' },
-  
-  // Tabs
-  tabContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 24,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  activeTab: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
-  tabText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
-  activeTabText: { color: '#0f172a' },
-  
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 24, paddingTop: 16, marginBottom: 20 },
+  headerTitle: { fontSize: 24, fontWeight: "bold", color: "#1e293b" },
+  headerSubtitle: { fontSize: 12, color: "#64748b" },
+  rangeButton: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#e2e8f0" },
+  rangeText: { marginHorizontal: 6, fontSize: 12, fontWeight: "600", color: "#475569" },
+  tabContainer: { flexDirection: "row", marginHorizontal: 24, backgroundColor: "#e2e8f0", borderRadius: 12, padding: 4, marginBottom: 20 },
+  tab: { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 },
+  activeTab: { backgroundColor: "#fff", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  tabText: { fontSize: 12, fontWeight: "600", color: "#64748b" },
+  activeTabText: { color: "#0f172a" },
   scrollContent: { paddingBottom: 40 },
-
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: 'white', width: '80%', padding: 24, borderRadius: 24 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
-  input: { backgroundColor: '#f1f5f9', padding: 12, borderRadius: 12, fontSize: 16, marginBottom: 24 },
-  modalButtons: { flexDirection: 'row', gap: 12 },
-  btn: { flex: 1, padding: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  btnCancel: { backgroundColor: '#f1f5f9' },
-  btnSave: { backgroundColor: '#8b5cf6' },
 });

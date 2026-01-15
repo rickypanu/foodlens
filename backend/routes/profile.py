@@ -18,23 +18,23 @@ async def update_my_profile(
     updated_data: dict = Body(...), 
     current_user: dict = Depends(get_current_user)
 ):
-    # 1. Remove sensitive or immutable fields so they can't be overwritten
+    # 1. Protection: Remove immutable/sensitive fields
+    # It is important to prevent users from changing their _id or email if that is your unique key
     updated_data.pop("_id", None) 
     updated_data.pop("password", None)
-    
-    # 2. Update the user in MongoDB
-    # We use "$set" to update only the fields sent in the request
+    # user_id is usually not changeable
+    updated_data.pop("user_id", None) 
+
+    # 2. Update logic
     update_result = await users_collection.update_one(
         {"_id": current_user["_id"]},
         {"$set": updated_data}
     )
 
-    if update_result.modified_count == 0 and update_result.matched_count == 0:
-        raise HTTPException(status_code=400, detail="Update failed")
-
-    # 3. Fetch and return the new profile data
+    # 3. Fetch fresh data
     new_user = await users_collection.find_one({"_id": current_user["_id"]})
     new_user["_id"] = str(new_user["_id"])
     new_user.pop("password", None)
     
+    # REMOVED THE COMMA HERE
     return new_user
