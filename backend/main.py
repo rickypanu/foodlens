@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import user_routes, addmeal, community, profile
+from routes import user_routes, addmeal, community, profile, home
 import uvicorn
 import time
 from fastapi.staticfiles import StaticFiles
@@ -34,6 +34,7 @@ app.include_router(user_routes.router)
 app.include_router(addmeal.router)
 app.include_router(community.router)
 app.include_router(profile.router)
+app.include_router(home.router)
 @app.get("/")
 async def root():
     return {"message": "Healthplate Backend is Running"}

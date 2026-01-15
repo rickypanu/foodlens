@@ -84,48 +84,48 @@ async def add_meal(meal: Meal):
         print("Error saving meal:", e)
         raise HTTPException(status_code=500, detail=str(e)) 
 
-@router.get("/{email}/daily-stats")
-async def get_daily_stats(email: str, date_str: Optional[str] = None):
-    """
-    Fetch total calories, protein, and meal count for a specific date.
-    Default date is today.
-    """
-    try:
-        # Use today's date if none provided
-        target_date = date_str or dt_date.today().isoformat()
+# @router.get("/{email}/daily-stats")
+# async def get_daily_stats(email: str, date_str: Optional[str] = None):
+#     """
+#     Fetch total calories, protein, and meal count for a specific date.
+#     Default date is today.
+#     """
+#     try:
+#         # Use today's date if none provided
+#         target_date = date_str or dt_date.today().isoformat()
         
-        # 1. Find user (optional check)
-        user = await users_collection.find_one({"email": email})
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+#         # 1. Find user (optional check)
+#         user = await users_collection.find_one({"email": email})
+#         if not user:
+#             raise HTTPException(status_code=404, detail="User not found")
 
-        # 2. Query meals for this email and date
-        # Note: We match the string format "YYYY-MM-DD" used in your add_meal function
-        cursor = addmeal_collection.find({
-            "email": email, 
-            "date": target_date
-        })
+#         # 2. Query meals for this email and date
+#         # Note: We match the string format "YYYY-MM-DD" used in your add_meal function
+#         cursor = addmeal_collection.find({
+#             "email": email, 
+#             "date": target_date
+#         })
         
-        meals = await cursor.to_list(length=100)
+#         meals = await cursor.to_list(length=100)
 
-        # 3. Calculate Totals
-        total_calories = 0
-        total_protein = 0
-        meal_count = len(meals)
+#         # 3. Calculate Totals
+#         total_calories = 0
+#         total_protein = 0
+#         meal_count = len(meals)
 
-        for meal in meals:
-            if "nutrition" in meal and meal["nutrition"]:
-                total_calories += meal["nutrition"].get("calories_mean", 0)
-                total_protein += meal["nutrition"].get("protein_mean", 0)
+#         for meal in meals:
+#             if "nutrition" in meal and meal["nutrition"]:
+#                 total_calories += meal["nutrition"].get("calories_mean", 0)
+#                 total_protein += meal["nutrition"].get("protein_mean", 0)
 
-        # 4. Return aggregated data
-        return {
-            "date": target_date,
-            "total_calories": round(total_calories),
-            "total_protein": round(total_protein, 1),
-            "meal_count": meal_count
-        }
+#         # 4. Return aggregated data
+#         return {
+#             "date": target_date,
+#             "total_calories": round(total_calories),
+#             "total_protein": round(total_protein, 1),
+#             "meal_count": meal_count
+#         }
 
-    except Exception as e:
-        print("Error fetching stats:", e)
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         print("Error fetching stats:", e)
+#         raise HTTPException(status_code=500, detail=str(e))
