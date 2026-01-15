@@ -28,14 +28,27 @@ async def signup(user_data: UserSignupSchema):
     if user_exists:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    # Hash password and prepare data
+    # Prepare user data
     user_dict = user_data.dict()
     user_dict["password"] = get_password_hash(user_data.password)
     user_dict["metrics"] = calculate_health_metrics(user_data)
 
-    await users_collection.insert_one(user_dict)
-    token = create_access_token({"sub": user_data.email})
-    return {"token": token, "message": "Account created successfully"}
+    # Insert user
+    result = await users_collection.insert_one(user_dict)
+
+    # Create token using user id (same as login)
+    token = create_access_token({"sub": str(result.inserted_id)})
+
+    # Prepare user data for frontend
+    user_dict["_id"] = str(result.inserted_id)
+    user_dict.pop("password", None)
+
+    return {
+        "token": token,
+        "user": user_dict,
+        "message": "Account created successfully"
+    }
+
 
 @router.post("/login")
 async def login(credentials: UserLoginSchema):

@@ -9,10 +9,42 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  KeyboardTypeOptions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/services/api";
+
+// --- Constants for Selections ---
+const ALLERGY_OPTIONS = [
+  "Gluten",
+  "Peanuts",
+  "Lactose/Dairy",
+  "Tree Nuts",
+  "Soy",
+  "Shellfish",
+  "Eggs",
+  "None",
+];
+const DISLIKE_OPTIONS = [
+  "Bitter Gourd (Karela)",
+  "Bottle Gourd (Lauki)",
+  "Eggplant (Brinjal)",
+  "Mushrooms",
+  "Broccoli",
+  "Tofu",
+  "Seafood",
+  "None",
+];
+const CUISINE_OPTIONS = [
+  "North Indian",
+  "South Indian",
+  "Punjabi",
+  "Gujrati",
+  "Bengali",
+  "Chinese",
+  "Continental",
+];
 
 // --- TypeScript Interfaces ---
 interface SignupFormData {
@@ -26,9 +58,9 @@ interface SignupFormData {
   activity_level: string;
   goal: string;
   dietary_type: string;
-  food_preferences: string[]; // keeping simple for UI
-  allergies: string;
-  disliked_food: string;
+  food_preferences: string[];
+  allergies: string[]; // Changed to Array
+  disliked_food: string[]; // Changed to Array
   cuisines: string[];
   health_concerns: string[];
 }
@@ -51,20 +83,20 @@ export default function SignupWizard() {
     goal: "",
     dietary_type: "",
     food_preferences: [],
-    allergies: "",
-    disliked_food: "",
+    allergies: [], // Initialize as empty array
+    disliked_food: [], // Initialize as empty array
     cuisines: [],
     health_concerns: [],
   });
 
-  // Helper to update state
+  // Helper for Text Inputs
   const update = (key: keyof SignupFormData, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Helper for Multi-Select Toggle
+  // Helper for Arrays (Multi-select)
   const toggleSelection = (
-    key: "health_concerns" | "cuisines",
+    key: "health_concerns" | "cuisines" | "allergies" | "disliked_food",
     value: string
   ) => {
     setForm((prev) => {
@@ -77,7 +109,6 @@ export default function SignupWizard() {
     });
   };
 
-  // --- Actions ---
   const handleNext = () => {
     if (step === 1 && form.password !== form.confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
@@ -96,36 +127,31 @@ export default function SignupWizard() {
     try {
       // Prepare payload
       const payload = {
-        ...form,
-        age: parseInt(form.age) || 0,
-        height: parseFloat(form.height) || 0,
-        weight: parseFloat(form.weight) || 0,
-        allergies: form.allergies ? form.allergies.split(",") : [],
-        disliked_food: form.disliked_food ? form.disliked_food.split(",") : [],
+        email: form.email,
+        password: form.password,
+        name: form.name,
+        age: Number(form.age),
+        height: Number(form.height),
+        weight: Number(form.weight),
+        activity_level: form.activity_level,
+        goal: form.goal,
+        dietary_type: form.dietary_type,
+        cuisines: form.cuisines,
+        health_concerns: form.health_concerns,
+        // Send arrays directly
+        allergies: form.allergies,
+        disliked_food: form.disliked_food,
       };
 
-      console.log("Sending Payload:", payload);
-
-      // API Call
       const res = await api.post("/users/signup", payload);
-
-      // --- DEBUG LOGGING (Check your terminal for this) ---
-      console.log("API STATUS:", res.status);
-      console.log("API DATA:", JSON.stringify(res.data, null, 2));
-
-      // --- SAFETY CHECKS ---
-      // We use '|| {}' to prevent crashes if data is missing
       const userData = res.data?.user || {};
       const metrics = userData?.metrics || {};
       const token = res.data?.token || "";
 
-      // Only navigate if we actually got a response, otherwise show alert
       if (!res.data) {
         Alert.alert("Error", "Server returned an empty response.");
         return;
       }
-
-      console.log("Navigating to Goal Summary...");
 
       router.replace({
         pathname: "/goal-summary",
@@ -136,32 +162,124 @@ export default function SignupWizard() {
         },
       });
     } catch (error: any) {
-      console.error("Signup Error Object:", error);
       Alert.alert(
         "Signup Failed",
-        error.response?.data?.detail || error.message || "Something went wrong"
+        error.response?.data?.detail?.[0]?.msg ||
+          error.response?.data?.detail ||
+          error.message
       );
     } finally {
       setLoading(false);
     }
   };
-  // --- Render Functions ---
 
-  const renderOptionBtn = (
+  // --- UI Helper Components ---
+  const renderInputWithIcon = (
     label: string,
-    isSelected: boolean,
-    onPress: () => void
+    value: string,
+    key: keyof SignupFormData,
+    icon: keyof typeof Ionicons.glyphMap,
+    placeholder: string,
+    keyboardType: KeyboardTypeOptions = "default",
+    secureTextEntry = false
   ) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.optionBtn, isSelected && styles.optionBtnSelected]}
-    >
-      <Text
-        style={[styles.optionText, isSelected && styles.optionTextSelected]}
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.inputWrapper}>
+        <Ionicons
+          name={icon}
+          size={20}
+          color="#9CA3AF"
+          style={styles.inputIcon}
+        />
+        <TextInput
+          placeholder={placeholder}
+          style={styles.input}
+          value={value}
+          onChangeText={(t) => update(key, t)}
+          autoCapitalize="none"
+          keyboardType={keyboardType}
+          secureTextEntry={secureTextEntry}
+          placeholderTextColor="#9CA3AF"
+        />
+      </View>
+    </View>
+  );
+
+  const renderSelectionCard = (
+    label: string,
+    value: string,
+    currentValue: string,
+    updateKey: keyof SignupFormData,
+    iconName: keyof typeof Ionicons.glyphMap,
+    description?: string
+  ) => {
+    const isSelected = currentValue === value;
+    return (
+      <TouchableOpacity
+        style={[styles.card, isSelected && styles.cardSelected]}
+        onPress={() => update(updateKey, value)}
+        activeOpacity={0.8}
       >
-        {label}
-      </Text>
-    </TouchableOpacity>
+        <View style={[styles.iconBox, isSelected && styles.iconBoxSelected]}>
+          <Ionicons
+            name={iconName}
+            size={24}
+            color={isSelected ? "#fff" : "#666"}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={[styles.cardTitle, isSelected && styles.cardTitleSelected]}
+          >
+            {label}
+          </Text>
+          {description && (
+            <Text
+              style={[styles.cardDesc, isSelected && styles.cardDescSelected]}
+            >
+              {description}
+            </Text>
+          )}
+        </View>
+        {isSelected && (
+          <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  // Helper for Chips Section
+  const renderChipSection = (
+    title: string,
+    options: string[],
+    selectedList: string[],
+    stateKey: "allergies" | "disliked_food" | "cuisines"
+  ) => (
+    <View style={{ marginBottom: 24 }}>
+      <Text style={styles.sectionHeader}>{title}</Text>
+      <View style={styles.wrapContainer}>
+        {options.map((opt) => (
+          <TouchableOpacity
+            key={opt}
+            style={[
+              styles.chip,
+              selectedList.includes(opt) && styles.chipSelected,
+            ]}
+            onPress={() => toggleSelection(stateKey, opt)}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                selectedList.includes(opt) && styles.chipTextSelected,
+              ]}
+            >
+              {opt}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
   );
 
   return (
@@ -179,40 +297,47 @@ export default function SignupWizard() {
         {step === 1 && (
           <View>
             <Text style={styles.title}>Create Account</Text>
-            <TextInput
-              placeholder="Email Address"
-              style={styles.input}
-              autoCapitalize="none"
-              value={form.email}
-              onChangeText={(t) => update("email", t)}
-            />
-            <TextInput
-              placeholder="Password"
-              style={styles.input}
-              secureTextEntry
-              value={form.password}
-              onChangeText={(t) => update("password", t)}
-            />
-            <TextInput
-              placeholder="Confirm Password"
-              style={styles.input}
-              secureTextEntry
-              value={form.confirmPassword}
-              onChangeText={(t) => update("confirmPassword", t)}
-            />
+            {renderInputWithIcon(
+              "Email",
+              form.email,
+              "email",
+              "mail-outline",
+              "Enter your email",
+              "email-address"
+            )}
+            {renderInputWithIcon(
+              "Password",
+              form.password,
+              "password",
+              "lock-closed-outline",
+              "Min 6 characters",
+              "default",
+              true
+            )}
+            {renderInputWithIcon(
+              "Confirm Password",
+              form.confirmPassword,
+              "confirmPassword",
+              "lock-closed-outline",
+              "Re-enter password",
+              "default",
+              true
+            )}
           </View>
         )}
 
         {/* STEP 2: Name */}
         {step === 2 && (
           <View>
-            <Text style={styles.title}>What should we call you?</Text>
-            <TextInput
-              placeholder="Full Name"
-              style={styles.input}
-              value={form.name}
-              onChangeText={(t) => update("name", t)}
-            />
+            <Text style={styles.title}>What's your name?</Text>
+            <Text style={styles.subtitle}>Let'spersonalize your experience</Text>
+            {renderInputWithIcon(
+              "Full Name",
+              form.name,
+              "name",
+              "person-outline",
+              "Enter your name"
+            )}
           </View>
         )}
 
@@ -221,35 +346,32 @@ export default function SignupWizard() {
           <View>
             <Text style={styles.title}>Body Stats</Text>
             <Text style={styles.subtitle}>
-              Used to calculate your metabolic rate.
+              We'll use these to calculate your goals
             </Text>
-
-            <Text style={styles.label}>Age</Text>
-            <TextInput
-              placeholder="e.g. 25"
-              keyboardType="numeric"
-              style={styles.input}
-              value={form.age}
-              onChangeText={(t) => update("age", t)}
-            />
-
-            <Text style={styles.label}>Height (cm)</Text>
-            <TextInput
-              placeholder="e.g. 175"
-              keyboardType="numeric"
-              style={styles.input}
-              value={form.height}
-              onChangeText={(t) => update("height", t)}
-            />
-
-            <Text style={styles.label}>Weight (kg)</Text>
-            <TextInput
-              placeholder="e.g. 70"
-              keyboardType="numeric"
-              style={styles.input}
-              value={form.weight}
-              onChangeText={(t) => update("weight", t)}
-            />
+            {renderInputWithIcon(
+              "Age",
+              form.age,
+              "age",
+              "calendar-outline",
+              "e.g. 25",
+              "numeric"
+            )}
+            {renderInputWithIcon(
+              "Height (cm)",
+              form.height,
+              "height",
+              "resize-outline",
+              "e.g. 175",
+              "numeric"
+            )}
+            {renderInputWithIcon(
+              "Weight (kg)",
+              form.weight,
+              "weight",
+              "scale-outline",
+              "e.g. 70",
+              "numeric"
+            )}
           </View>
         )}
 
@@ -257,24 +379,72 @@ export default function SignupWizard() {
         {step === 4 && (
           <View>
             <Text style={styles.title}>Activity & Goal</Text>
-
+            <Text style={styles.subtitle}>
+              Help us understand your lifestyle
+            </Text>
             <Text style={styles.sectionHeader}>Activity Level</Text>
-            {["Sedentary", "Light", "Moderate", "High"].map((opt) =>
-              renderOptionBtn(opt, form.activity_level === opt, () =>
-                update("activity_level", opt)
-              )
+
+            {renderSelectionCard(
+              "Sedentary",
+              "Sedentary",
+              form.activity_level,
+              "activity_level",
+              "desktop-outline",
+              "Desk job, little exercise"
+            )}
+            {renderSelectionCard(
+              "Lightly Active",
+              "Light",
+              form.activity_level,
+              "activity_level",
+              "walk-outline",
+              "1-2 days/week exercise"
+            )}
+            {renderSelectionCard(
+              "Moderately Active",
+              "Moderate",
+              form.activity_level,
+              "activity_level",
+              "bicycle-outline",
+              "3-4 days/week exercise"
+            )}
+            {renderSelectionCard(
+              "Highly Active",
+              "High",
+              form.activity_level,
+              "activity_level",
+              "barbell-outline",
+              "Daily intense activity"
             )}
 
             <Text style={styles.sectionHeader}>Fitness Goal</Text>
-            {[
-              { label: "Maintain Weight", val: "maintain" },
-              { label: "Fat Loss", val: "fat_loss" },
-              { label: "Muscle Gain", val: "muscle_gain" },
-              { label: "Improve Energy", val: "energy" },
-            ].map((opt) =>
-              renderOptionBtn(opt.label, form.goal === opt.val, () =>
-                update("goal", opt.val)
-              )
+            {renderSelectionCard(
+              "Maintain Weight",
+              "maintain",
+              form.goal,
+              "goal",
+              "medkit-outline"
+            )}
+            {renderSelectionCard(
+              "Fat Loss",
+              "fat_loss",
+              form.goal,
+              "goal",
+              "trending-down-outline"
+            )}
+            {renderSelectionCard(
+              "Muscle Gain",
+              "muscle_gain",
+              form.goal,
+              "goal",
+              "fitness-outline"
+            )}
+            {renderSelectionCard(
+              "Improve Energy",
+              "energy",
+              form.goal,
+              "goal",
+              "flash-outline"
             )}
           </View>
         )}
@@ -283,59 +453,69 @@ export default function SignupWizard() {
         {step === 5 && (
           <View>
             <Text style={styles.title}>Dietary Preference</Text>
-            {["Vegetarian", "Egg", "Vegan", "Non-Veg"].map((opt) =>
-              renderOptionBtn(opt, form.dietary_type === opt, () =>
-                update("dietary_type", opt)
-              )
+            <Text style={styles.subtitle}>What do you eat?</Text>
+            {renderSelectionCard(
+              "Vegetarian",
+              "Vegetarian",
+              form.dietary_type,
+              "dietary_type",
+              "leaf-outline"
+            )}
+            {renderSelectionCard(
+              "Eggetarian",
+              "Egg",
+              form.dietary_type,
+              "dietary_type",
+              "egg-outline"
+            )}
+            {renderSelectionCard(
+              "Non-Vegetarian",
+              "Non-Veg",
+              form.dietary_type,
+              "dietary_type",
+              "restaurant-outline"
+            )}
+            {renderSelectionCard(
+              "Vegan",
+              "Vegan",
+              form.dietary_type,
+              "dietary_type",
+              "nutrition-outline"
             )}
           </View>
         )}
 
-        {/* STEP 6: Food Preferences */}
+        {/* STEP 6: Food Preferences (UPDATED) */}
         {step === 6 && (
           <View>
-            <Text style={styles.title}>Food Details</Text>
+            <Text style={styles.title}>Food Preference</Text>
+            <Text style={styles.subtitle}>
+              Help us personalize your experience
+            </Text>
 
-            <Text style={styles.label}>Allergies (Optional)</Text>
-            <TextInput
-              placeholder="e.g. Peanuts, Gluten"
-              style={styles.input}
-              value={form.allergies}
-              onChangeText={(t) => update("allergies", t)}
-            />
+            {/* 1. Allergies */}
+            {renderChipSection(
+              "Food Allergies (Optional)",
+              ALLERGY_OPTIONS,
+              form.allergies,
+              "allergies"
+            )}
 
-            <Text style={styles.label}>Foods you dislike (Optional)</Text>
-            <TextInput
-              placeholder="e.g. Broccoli, Fish"
-              style={styles.input}
-              value={form.disliked_food}
-              onChangeText={(t) => update("disliked_food", t)}
-            />
+            {/* 2. Dislikes */}
+            {renderChipSection(
+              "Foods You Dislike (Optional)",
+              DISLIKE_OPTIONS,
+              form.disliked_food,
+              "disliked_food"
+            )}
 
-            <Text style={styles.sectionHeader}>Preferred Cuisines</Text>
-            <View style={styles.wrapContainer}>
-              {["Indian", "Italian", "Mexican", "Chinese", "Continental"].map(
-                (c) => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[
-                      styles.chip,
-                      form.cuisines.includes(c) && styles.chipSelected,
-                    ]}
-                    onPress={() => toggleSelection("cuisines", c)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        form.cuisines.includes(c) && styles.chipTextSelected,
-                      ]}
-                    >
-                      {c}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              )}
-            </View>
+            {/* 3. Cuisines */}
+            {renderChipSection(
+              "Preferred Cuisines(Optional)",
+              CUISINE_OPTIONS,
+              form.cuisines,
+              "cuisines"
+            )}
           </View>
         )}
 
@@ -343,6 +523,8 @@ export default function SignupWizard() {
         {step === 7 && (
           <View>
             <Text style={styles.title}>Health Concerns</Text>
+            <Text style={styles.subtitle}>Almost Done!</Text>
+
             <Text style={styles.subtitle}>
               Select any that apply (Optional)
             </Text>
@@ -352,6 +534,8 @@ export default function SignupWizard() {
               "Hypertension (BP)",
               "PCOS/PCOD",
               "High Cholesterol",
+              "Thyroid Issues",
+              "Kidney Issue",
               "None",
             ].map((h) => (
               <TouchableOpacity
@@ -369,22 +553,28 @@ export default function SignupWizard() {
                       : "square-outline"
                   }
                   size={24}
-                  color="#4CAF50"
+                  color={form.health_concerns.includes(h) ? "#4CAF50" : "#ccc"}
                 />
-                <Text style={styles.checkboxText}>{h}</Text>
+                <Text
+                  style={[
+                    styles.checkboxText,
+                    form.health_concerns.includes(h) && {
+                      fontWeight: "600",
+                      color: "#333",
+                    },
+                  ]}
+                >
+                  {h}
+                </Text>
               </TouchableOpacity>
             ))}
 
             <View style={styles.divider} />
-
             <Text style={styles.disclaimerHeader}>Terms & Disclaimer</Text>
             <View style={styles.disclaimerBox}>
               <Text style={styles.disclaimerText}>
                 Healthplate provides nutrition tracking and insights for
-                informational purposes only. This is not medical advice. Please
-                consult with a healthcare professional or registered dietitian
-                for personalized medical or dietary guidance. We are not
-                responsible for any health decisions made based on this app.
+                informational purposes only. Not medical advice.
               </Text>
             </View>
             <Text style={styles.agreeText}>
@@ -431,89 +621,119 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 16, fontWeight: "600", color: "#666" },
   content: { padding: 20, paddingBottom: 100 },
-
-  title: { fontSize: 28, fontWeight: "bold", marginBottom: 10, color: "#333" },
-  subtitle: { fontSize: 14, color: "#888", marginBottom: 20 },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 8,
-    marginTop: 10,
-    color: "#333",
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#1F2937",
   },
+  subtitle: { fontSize: 14, color: "#6B7280", marginBottom: 20 },
 
-  input: {
+  // Input Styles
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 8, color: "#374151" },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#E5E7EB",
     borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 15,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: 12,
+    height: 50,
   },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 16, color: "#1F2937", height: "100%" },
 
   sectionHeader: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 20,
-    marginBottom: 10,
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 10,
+    marginBottom: 12,
+    color: "#111827",
   },
 
-  // Option Buttons (Step 4 & 5)
-  optionBtn: {
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    marginBottom: 10,
+  // Card Selection Styles
+  card: {
+    flexDirection: "row",
     alignItems: "center",
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 16,
+    marginBottom: 12,
     backgroundColor: "#fff",
   },
-  optionBtnSelected: { borderColor: "#4CAF50", backgroundColor: "#e8f5e9" },
-  optionText: { fontSize: 16, color: "#333" },
-  optionTextSelected: { color: "#2E7D32", fontWeight: "bold" },
+  cardSelected: {
+    borderColor: "#10B981",
+    backgroundColor: "#ECFDF5",
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  iconBoxSelected: {
+    backgroundColor: "#10B981",
+  },
+  cardTitle: { fontSize: 16, fontWeight: "600", color: "#1F2937" },
+  cardTitleSelected: { color: "#065F46" },
+  cardDesc: { fontSize: 13, color: "#6B7280", marginTop: 2 },
+  cardDescSelected: { color: "#047857" },
 
-  // Chips (Step 6)
-  wrapContainer: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  // Chips
+  wrapContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#F3F4F6",
     marginBottom: 8,
   },
-  chipSelected: { backgroundColor: "#4CAF50" },
-  chipText: { color: "#333" },
+  chipSelected: { backgroundColor: "#10B981" },
+  chipText: { color: "#4B5563", fontWeight: "500" },
   chipTextSelected: { color: "#fff" },
 
-  // Checkboxes (Step 7)
+  // Checkboxes
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    gap: 10,
-  },
-  checkboxSelected: { backgroundColor: "#f9f9f9", borderRadius: 8 },
-  checkboxText: { fontSize: 16 },
-
-  divider: { height: 1, backgroundColor: "#eee", marginVertical: 20 },
-  disclaimerHeader: { fontWeight: "bold", marginBottom: 8 },
-  disclaimerBox: {
-    backgroundColor: "#fff3cd",
-    padding: 10,
-    borderRadius: 8,
-    borderColor: "#ffeeba",
+    padding: 16,
     borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    marginBottom: 10,
+    gap: 12,
   },
-  disclaimerText: { fontSize: 12, color: "#856404", lineHeight: 18 },
+  checkboxSelected: {
+    borderColor: "#10B981",
+    backgroundColor: "#F0FDF4",
+  },
+  checkboxText: { fontSize: 16, color: "#4B5563" },
+
+  // Legal/Terms
+  divider: { height: 1, backgroundColor: "#E5E7EB", marginVertical: 24 },
+  disclaimerHeader: { fontWeight: "bold", marginBottom: 8, color: "#374151" },
+  disclaimerBox: {
+    backgroundColor: "#FEF3C7",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+  },
+  disclaimerText: { fontSize: 12, color: "#92400E", lineHeight: 18 },
   agreeText: {
     fontSize: 12,
-    color: "#666",
+    color: "#6B7280",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 12,
   },
 
-  // Footer Buttons
+  // Footer
   footer: {
     position: "absolute",
     bottom: 0,
@@ -522,23 +742,28 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    borderTopColor: "#F3F4F6",
   },
   nextBtn: {
-    backgroundColor: "#333",
+    backgroundColor: "#111827",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
-    borderRadius: 50,
-    gap: 10,
+    borderRadius: 16,
+    gap: 8,
   },
   nextBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   submitBtn: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#10B981",
     padding: 16,
-    borderRadius: 50,
+    borderRadius: 16,
     alignItems: "center",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitBtnText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 });

@@ -38,29 +38,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadAuth();
   }, []);
 
-  // 2. Protect Routes (Redirect if not logged in)
+  // 2. Protect Routes (Redirect logic)
   useEffect(() => {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inTabsGroup = segments[0] === '(tabs)';
-
+    
+    // If not logged in & not in auth group (logic handled by specific screens usually)
     if (!userToken && !inAuthGroup) {
-      // If not logged in and not in auth group, go to login
-      // We wait for the splash screen (index.tsx) to handle initial routing
-    } else if (userToken && inAuthGroup) {
-      // If logged in but in auth group, redirect to home
+      // optional: router.replace('/(auth)/login'); 
+    } 
+    // If logged in & trying to access auth screens, redirect to home
+    else if (userToken && inAuthGroup) {
       router.replace('/(tabs)');
     }
   }, [userToken, segments, isLoading]);
 
+  // --- MISSING PART RESTORED BELOW ---
+  
   const login = async (token: string, user: any) => {
+    // Update State
     setUserToken(token);
     setUserData(user);
+    
+    // Save to Storage
     await AsyncStorage.setItem('userToken', token);
     await AsyncStorage.setItem('userData', JSON.stringify(user));
-    router.replace('/(tabs)');
+
+    // NOTE: We do NOT redirect here anymore. 
+    // The specific screen (Login or Subscribe) will handle the redirect.
   };
+
+  // ------------------------------------
 
   const logout = async () => {
     setUserToken(null);

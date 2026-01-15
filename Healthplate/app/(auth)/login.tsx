@@ -28,23 +28,29 @@ export default function LoginScreen() {
   const router = useRouter();
 
   // --- 3. Update Login Logic ---
+
   const handleLogin = async () => {
     if (!email || !password) {
       setError("Please enter both email and password.");
       return;
     }
 
-    setError(""); // Clear previous errors
-    setLoading(true); // Start loading
+    setError("");
+    setLoading(true);
 
     try {
       const res = await api.post("/users/login", { email, password });
+      
+      // 1. Save data
       await login(res.data.token, res.data.user);
-      // We don't set loading(false) here because the app will redirect
+      
+      // 2. Manually Navigate (✅ ADD THIS)
+      router.replace("/(tabs)"); 
+      
     } catch (err) {
       console.error(err);
       setError("Invalid email or password. Please try again.");
-      setLoading(false); // Stop loading on error
+      setLoading(false);
     }
   };
 

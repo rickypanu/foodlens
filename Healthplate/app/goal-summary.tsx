@@ -8,16 +8,18 @@ export default function GoalSummary() {
   const router = useRouter();
   const params = useLocalSearchParams();
   
+
   // Parse the data passed from Signup
   const metrics = params.goals ? JSON.parse(params.goals as string) : {};
-  const token = params.token as string;
-  const user = params.user as string;
+  const token = params.token as string; 
+  const userString = params.user as string;
 
   const handleContinue = () => {
     // Pass the credentials forward to the subscription page
     router.push({ 
       pathname: '/SubscriptionChoice',
-      params: { token, user } 
+      params: { token:token
+        , user: userString } 
     });
   };
 
