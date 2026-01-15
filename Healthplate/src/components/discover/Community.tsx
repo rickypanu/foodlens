@@ -280,14 +280,14 @@ export default function Community() {
               ))}
             </ScrollView>
           </View>
-
+          <Text>Title</Text>
           <TextInput
             placeholder="Title (Optional)"
             style={styles.input}
             value={newTitle}
             onChangeText={setNewTitle}
           />
-
+          <Text>Description</Text>
           <TextInput
             placeholder="What's on your mind?"
             style={[styles.input, { height: 60, textAlignVertical: "top" }]}
@@ -295,9 +295,9 @@ export default function Community() {
             value={newContent}
             onChangeText={setNewContent}
           />
-
+          <Text>Add Tags</Text>
           <TextInput
-            placeholder="Tags (comma separated: python, react)"
+            placeholder="Tags (comma separated:#tips,#motivational)"
             style={styles.input}
             value={newTags}
             onChangeText={setNewTags}
