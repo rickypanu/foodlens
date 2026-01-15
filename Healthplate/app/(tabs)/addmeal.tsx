@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { api } from "@/src/services/api";
 import { useAuth } from "@/src/context/AuthContext";
 import { Label } from "@react-navigation/elements";
+import CustomHeader from "@/src/components/header";
 
 const MEAL_TYPES = [
   { id: "breakfast", label: "Breakfast", icon: Coffee, time: "6am - 11am" },
@@ -904,6 +905,7 @@ export default function AddMeal({ navigation }) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
+        <CustomHeader/>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity

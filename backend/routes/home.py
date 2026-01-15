@@ -117,7 +117,6 @@ async def get_weekly_activity(email: str):
 #3 ----- delete meal
 @router.delete("/{email}/meals/{meal_id}")
 async def delete_meal(email: str, meal_id: str):
-    print(f"Backend received delete for: {email}, meal: {meal_id}") # <--- ADD PRINT HERE
     try:
         if not ObjectId.is_valid(meal_id):
              raise HTTPException(status_code=400, detail="Invalid Meal ID format")
@@ -128,11 +127,9 @@ async def delete_meal(email: str, meal_id: str):
         })
 
         if result.deleted_count == 0:
-            print("Meal not found or email mismatch")
             raise HTTPException(status_code=404, detail="Meal not found")
 
         return {"status": "success", "message": "Meal deleted"}
 
     except Exception as e:
-        print(f"Error deleting meal: {e}")
         raise HTTPException(status_code=500, detail=str(e))
