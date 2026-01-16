@@ -142,14 +142,6 @@ const handleDeleteMeal = async (mealId) => {
 
       {!loading && <StreakCalendar weekData={weekData} />}
 
-      {/* ADD MEAL BUTTON */}
-      <View style={styles.statusCard}>
-        <TouchableOpacity style={styles.addMealButton} onPress={() => router.push("/addmeal")}>
-          <Ionicons name="add-circle-outline" size={20} color="#fff" />
-          <Text style={styles.addMealText}>Add Meal</Text>
-        </TouchableOpacity>
-      </View>
-
       {loading ? (
         <ActivityIndicator size="large" color="#4CAF50" style={{marginTop: 20}} />
       ) : (
@@ -199,8 +191,6 @@ const styles = StyleSheet.create({
   upgradeButton: { backgroundColor: "#F59E0B", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 },
   upgradeBtnText: { color: "#FFFFFF", fontWeight: "600", fontSize: 14 },
   container: { flex: 1, backgroundColor: "#fff", padding: 20, paddingTop: 0 },
-  addMealButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4CAF50", paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25, marginTop: 12 },
-  addMealText: { color: "#fff", fontWeight: "600", marginLeft: 8 },
   header: { alignItems: "center", justifyContent: "center", paddingVertical: 20 },
   logo: { width: 60, height: 60, marginBottom: 8 },
   appName: { fontSize: 22, fontWeight: "bold", color: "#333", marginBottom: 4 },
@@ -215,5 +205,5 @@ const styles = StyleSheet.create({
   cardValue: { color: "#fff", fontSize: 32, fontWeight: "700" },
   cardValueDark: { fontSize: 32, fontWeight: "700", color: '#111827' },
   cardSub: { color: "#9CA3AF", marginTop: 4 },
-  proteinCard: { backgroundColor: "#F9FAFB", padding: 16, borderRadius: 20, marginTop: 16 },
+  proteinCard: { backgroundColor: "#F9FAFB", padding: 16, borderRadius: 20, marginTop: 16, marginBottom:20 },
 });

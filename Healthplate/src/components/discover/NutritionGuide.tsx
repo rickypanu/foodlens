@@ -1,17 +1,31 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 
 export default function NutritionGuide() {
+  const [openIndex, setOpenIndex] = useState(0);
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Nutrient Encyclopedia</Text>
-      <Text style={styles.subHeader}>Learn what each nutrient does and where to find it</Text>
+      <Text style={styles.subHeader}>
+        Simple nutrition guidance for everyday healthy living
+      </Text>
 
       {/* 1. Protein */}
       <ExpandableNutrient
+        index={0}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Protein"
         value="0.8–1.6g per kg body weight"
-        note="• Sedentary: Aim for 0.8g\n• Active/Muscle Gain: Aim for 1.2–1.6g"
+        note="• Sedentary: Aim for 0.8g\n• Active/Muscle Gain: Aim for 1.2–1.6g
+• More is not always better; excess protein may stress kidneys if hydration is poor
+"
         does="Builds and repairs tissues, muscles, organs. Essential for enzymes and hormones."
         matters="Critical for muscle growth, recovery, immune function, and keeping you full (satiety)."
         veg="Dal (Lentils), Paneer, Chickpeas, Tofu, Soy chunks, Milk, Yogurt, Nuts."
@@ -20,9 +34,14 @@ export default function NutritionGuide() {
 
       {/* 2. Carbohydrates */}
       <ExpandableNutrient
+        index={1}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Carbohydrates"
         value="45–60% of daily calories"
-        note="• Focus on complex carbs (whole grains) over sugar."
+        note="• Focus on complex carbs (whole grains) over sugar.
+• Low-carb diets may reduce energy, focus, and workout performance.
+"
         does="The body's primary fuel source. Breaks down into glucose for immediate energy."
         matters="Fuels the brain, muscles, and daily physical activities."
         veg="Roti (Wheat), Rice, Oats, Potatoes, Sweet Potatoes, Fruits, Quinoa, Millets (Bajra/Jowar)."
@@ -31,9 +50,14 @@ export default function NutritionGuide() {
 
       {/* 3. Fats */}
       <ExpandableNutrient
+        index={2}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Fats"
         value="20–30% of daily calories"
-        note="• Limit saturated fats; avoid trans fats."
+        note="• Limit saturated fats; avoid trans fats.
+• Focus on unsaturated fats; avoid fried and packaged foods.
+"
         does="Supports hormone production, nutrient absorption (Vit A, D, E, K), and cell structure."
         matters="Essential for brain health, glowing skin, and long-term energy storage."
         veg="Ghee, Mustard Oil, Olive Oil, Almonds, Walnuts, Chia Seeds, Flaxseeds, Avocado."
@@ -42,6 +66,9 @@ export default function NutritionGuide() {
 
       {/* 4. Fiber */}
       <ExpandableNutrient
+        index={3}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Fiber"
         value="25–35g per day"
         note="• Drink plenty of water when increasing fiber."
@@ -53,9 +80,14 @@ export default function NutritionGuide() {
 
       {/* 5. Iron */}
       <ExpandableNutrient
+        index={4}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Iron"
         value="Men: 8mg | Women: 18mg"
-        note="• Pair veg sources with Vitamin C (Lemon) for better absorption."
+        note="• Pair veg sources with Vitamin C (Lemon) for better absorption.
+• Especially important for women due to monthly blood loss.
+"
         does="Used to make hemoglobin, which transports oxygen in the blood."
         matters="Prevents anemia, reduces fatigue, and maintains energy levels."
         veg="Spinach (Palak), Lentils, Pumpkin Seeds, Jaggery (Gud), Dates, Beetroot."
@@ -64,6 +96,9 @@ export default function NutritionGuide() {
 
       {/* 6. Calcium */}
       <ExpandableNutrient
+        index={5}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Calcium"
         value="1000mg per day"
         note="• Essential for all ages, especially seniors."
@@ -75,9 +110,14 @@ export default function NutritionGuide() {
 
       {/* 7. Vitamin D */}
       <ExpandableNutrient
+        index={6}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Vitamin D"
         value="600 IU (15mcg) per day"
-        note="• Hard to get from food alone; sunlight is key."
+        note="• Hard to get from food alone; sunlight is key.
+• 15–20 minutes of midday sun exposure is usually sufficient.
+"
         does="Helps the body absorb calcium and phosphorus."
         matters="Strengthens bones, boosts immune system, and improves mood."
         veg="Sunlight (Primary Source), Mushrooms, Fortified Milk."
@@ -86,9 +126,14 @@ export default function NutritionGuide() {
 
       {/* 8. Vitamin B12 */}
       <ExpandableNutrient
+        index={7}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Vitamin B12"
         value="2.4mcg per day"
-        note="• Vegetarians may need supplements."
+        note="• Vegetarians may need supplements.
+• Vegetarians often require supplements after blood testing.
+"
         does="Keeps nerve and blood cells healthy; helps make DNA."
         matters="Prevents megaloblastic anemia (tiredness/weakness) and nerve damage."
         veg="Fortified Cereals, Milk, Curd (small amounts)."
@@ -97,6 +142,9 @@ export default function NutritionGuide() {
 
       {/* 9. Vitamin C */}
       <ExpandableNutrient
+        index={8}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Vitamin C"
         value="75–90mg per day"
         note="• Heat destroys Vitamin C; eat raw fruits."
@@ -107,6 +155,9 @@ export default function NutritionGuide() {
       />
       {/* 10. Potassium */}
       <ExpandableNutrient
+        index={9}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Potassium"
         value="3,500–4,700mg per day"
         note="• Helps counter the effects of high sodium (salt) intake."
@@ -118,6 +169,9 @@ export default function NutritionGuide() {
 
       {/* 11. Magnesium */}
       <ExpandableNutrient
+        index={10}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Magnesium"
         value="Men: 400mg | Women: 310mg"
         note="• Often lacking in processed diets; aids sleep."
@@ -129,9 +183,14 @@ export default function NutritionGuide() {
 
       {/* 12. Omega-3 Fatty Acids */}
       <ExpandableNutrient
+        index={11}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Omega-3 (EPA/DHA)"
         value="250–500mg (combined EPA/DHA)"
-        note="• Plant sources (ALA) convert poorly; supplements may be needed for vegetarians."
+        note="• Plant sources (ALA) convert poorly; supplements may be needed for vegetarians.
+• Anti-inflammatory fat essential for brain, heart, and eye health.
+"
         does="Anti-inflammatory fat essential for cell membranes."
         matters="Vital for brain health, reducing heart disease risk, and eye health."
         veg="Flaxseeds (Alsi), Chia Seeds, Walnuts (ALA source), Algae Oil Supplements."
@@ -140,6 +199,9 @@ export default function NutritionGuide() {
 
       {/* 13. Zinc */}
       <ExpandableNutrient
+        index={12}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Zinc"
         value="Men: 11mg | Women: 8mg"
         note="• Important for men's hormonal health."
@@ -151,6 +213,9 @@ export default function NutritionGuide() {
 
       {/* 14. Folate (Vitamin B9) */}
       <ExpandableNutrient
+        index={13}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Folate (Vitamin B9)"
         value="400mcg per day"
         note="• Crucial during pregnancy to prevent birth defects."
@@ -162,9 +227,14 @@ export default function NutritionGuide() {
 
       {/* 15. Sodium */}
       <ExpandableNutrient
+        index={14}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Sodium"
         value="Less than 2,300mg (1 tsp salt)"
-        note="• Most processed foods are high in hidden sodium."
+        note="• Most processed foods are high in hidden sodium.
+• Athletes and people who sweat heavily may need slightly more sodium.
+"
         does="Maintains fluid balance and supports nerve/muscle function."
         matters="Too much causes high blood pressure; too little causes cramping/weakness."
         veg="Table Salt, Pickles (Achar), Papad, Sea Salt."
@@ -173,6 +243,9 @@ export default function NutritionGuide() {
 
       {/* 16. Vitamin A */}
       <ExpandableNutrient
+        index={15}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Vitamin A"
         value="Men: 900mcg | Women: 700mcg"
         note="• Fat-soluble; eat with some oil/ghee for absorption."
@@ -184,6 +257,9 @@ export default function NutritionGuide() {
 
       {/* 17. Vitamin E */}
       <ExpandableNutrient
+        index={16}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Vitamin E"
         value="15mg per day"
         note="• A powerful antioxidant often used in skincare."
@@ -195,6 +271,9 @@ export default function NutritionGuide() {
 
       {/* 18. Vitamin K */}
       <ExpandableNutrient
+        index={17}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Vitamin K"
         value="Men: 120mcg | Women: 90mcg"
         note="• Be careful with Vitamin K if you are on blood thinners."
@@ -206,6 +285,9 @@ export default function NutritionGuide() {
 
       {/* 19. Iodine */}
       <ExpandableNutrient
+        index={18}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Iodine"
         value="150mcg per day"
         note="• Most table salt in India is iodized to prevent deficiency."
@@ -217,6 +299,9 @@ export default function NutritionGuide() {
 
       {/* 20. Selenium */}
       <ExpandableNutrient
+        index={19}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Selenium"
         value="55mcg per day"
         note="• You only need a small amount; excess can be harmful."
@@ -228,6 +313,9 @@ export default function NutritionGuide() {
 
       {/* 21. Vitamin B6 (Pyridoxine) */}
       <ExpandableNutrient
+        index={20}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Vitamin B6"
         value="1.3mg per day"
         note="• Helps the body produce serotonin (the 'happy' hormone)."
@@ -239,6 +327,9 @@ export default function NutritionGuide() {
 
       {/* 22. Probiotics (Gut Health) */}
       <ExpandableNutrient
+        index={21}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Probiotics"
         value="1–2 servings per day"
         note="• Look for 'live active cultures' on labels."
@@ -250,6 +341,9 @@ export default function NutritionGuide() {
 
       {/* 23. Phosphorus */}
       <ExpandableNutrient
+        index={22}
+        openIndex={openIndex}
+        setOpenIndex={setOpenIndex}
         title="Phosphorus"
         value="700mg per day"
         note="• Usually abundant in diets that are high in protein."
@@ -259,51 +353,71 @@ export default function NutritionGuide() {
         nonVeg="Chicken, Fish, Eggs."
       />
 
+      <Text style={styles.disclaimer}>
+        This guide is for educational purposes only. Consult a doctor or
+        dietitian for medical advice.
+      </Text>
     </ScrollView>
   );
 }
 
 // --- Helper Component ---
-function ExpandableNutrient({ title, value, note, does, matters, veg, nonVeg }) {
-  const [isOpen, setIsOpen] = useState(false);
-
+function ExpandableNutrient({
+  index,
+  openIndex,
+  setOpenIndex,
+  title,
+  value,
+  note,
+  does,
+  matters,
+  veg,
+  nonVeg,
+}) {
+  const isOpen = openIndex === index;
   return (
     <View style={styles.cardContainer}>
-      <TouchableOpacity 
-        style={styles.nutrientHeader} 
-        onPress={() => setIsOpen(!isOpen)}
+      <TouchableOpacity
+        style={styles.nutrientHeader}
+        onPress={() => setOpenIndex(isOpen ? null : index)}
         activeOpacity={0.7}
       >
         <View>
           <Text style={styles.nutrientTitle}>{title}</Text>
           <Text style={styles.nutrientValue}>{value}</Text>
         </View>
-        <Text style={styles.arrow}>{isOpen ? "▲" : "▼"}</Text>
+        <Text style={styles.arrow}>{isOpen ? "Hide ▲" : "Show ▼"}</Text>
       </TouchableOpacity>
-      
+
       {isOpen && (
-        <View style={styles.expandContent}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setOpenIndex(null)}
+          style={styles.expandContent}
+        >
           {/* Note Section (Range Clarification) */}
           {note && (
-             <View style={styles.noteBox}>
-               <Text style={styles.noteText}>{note}</Text>
-             </View>
+            <View style={styles.noteBox}>
+              <Text style={styles.noteText}>{note}</Text>
+            </View>
           )}
 
           <Text style={styles.label}>What it does:</Text>
           <Text style={styles.bodyText}>{does}</Text>
-          
+
           <Text style={styles.label}>Why it matters:</Text>
           <Text style={styles.bodyText}>{matters}</Text>
-          
+
           {/* Veg Sources */}
           {veg && (
             <View style={styles.sourceRow}>
               <Text style={styles.sourceLabel}>🌱 Vegetarian Sources:</Text>
               <View style={styles.tagContainer}>
-                 {veg.split(',').map((item, index) => (
-                    <Text key={index} style={styles.foodTag}>{item.trim()}</Text>
-                 ))}
+                {veg.split(",").map((item, index) => (
+                  <Text key={index} style={styles.foodTag}>
+                    {item.trim()}
+                  </Text>
+                ))}
               </View>
             </View>
           )}
@@ -313,52 +427,108 @@ function ExpandableNutrient({ title, value, note, does, matters, veg, nonVeg }) 
             <View style={styles.sourceRow}>
               <Text style={styles.sourceLabel}>🍖 Non-Veg Sources:</Text>
               <View style={styles.tagContainer}>
-                 {nonVeg.split(',').map((item, index) => (
-                    <Text key={index} style={styles.foodTag}>{item.trim()}</Text>
-                 ))}
+                {nonVeg.split(",").map((item, index) => (
+                  <Text key={index} style={styles.foodTag}>
+                    {item.trim()}
+                  </Text>
+                ))}
               </View>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: "#fff" },
-  header: { fontSize: 22, fontWeight: "800", color: "#1a1a1a", marginBottom: 4 },
+  container: { padding: 10, backgroundColor: "#fff" },
+  header: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#1a1a1a",
+    marginBottom: 4,
+  },
   subHeader: { fontSize: 14, color: "#666", marginBottom: 20 },
-  
-  cardContainer: { marginBottom: 12, borderRadius: 16, overflow: 'hidden', backgroundColor: "#fff", elevation: 2, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, shadowOffset: {width: 0, height: 2} },
-  
-  nutrientHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: "#fafafa" },
+
+  cardContainer: {
+    width: "100%",
+    marginBottom: 12,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#fffefe",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  nutrientHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fafafa",
+  },
   nutrientTitle: { fontSize: 18, fontWeight: "700", color: "#333" },
-  nutrientValue: { fontSize: 13, color: "#e63946", fontWeight: "600", marginTop: 2 },
+  nutrientValue: {
+    fontSize: 13,
+    color: "#2d6a4f",
+    fontWeight: "600",
+    marginTop: 2,
+  },
   arrow: { fontSize: 14, color: "#999" },
 
   expandContent: { padding: 16, backgroundColor: "#fff5f5" }, // Light red background like image
-  
-  noteBox: { backgroundColor: "rgba(230, 57, 70, 0.1)", padding: 10, borderRadius: 8, marginBottom: 12 },
-  noteText: { fontSize: 12, color: "#d62828", lineHeight: 18, fontWeight: "600" },
 
-  label: { fontSize: 14, fontWeight: "700", color: "#333", marginTop: 10, marginBottom: 4 },
+  noteBox: {
+    backgroundColor: "rgba(230, 57, 70, 0.1)",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  noteText: {
+    fontSize: 12,
+    color: "#d62828",
+    lineHeight: 18,
+    fontWeight: "600",
+  },
+
+  label: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#333",
+    marginTop: 10,
+    marginBottom: 4,
+  },
   bodyText: { fontSize: 14, color: "#444", lineHeight: 20, marginBottom: 4 },
-  
+
   sourceRow: { marginTop: 12 },
-  sourceLabel: { fontSize: 14, fontWeight: "700", color: "#2d6a4f", marginBottom: 6 },
-  
-  tagContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  foodTag: { 
-    fontSize: 12, 
-    backgroundColor: "#fff", 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    borderRadius: 6, 
-    marginRight: 6, 
-    marginBottom: 6, 
+  sourceLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#2d6a4f",
+    marginBottom: 6,
+  },
+
+  tagContainer: { flexDirection: "row", flexWrap: "wrap" },
+  foodTag: {
+    fontSize: 12,
+    backgroundColor: "#fff",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginRight: 6,
+    marginBottom: 6,
     color: "#444",
     borderWidth: 1,
-    borderColor: "#eee"
-  }
+    borderColor: "#eee",
+  },
+  disclaimer: {
+    fontSize: 12,
+    color: "#999",
+    textAlign: "center",
+    marginVertical: 24,
+  },
 });
