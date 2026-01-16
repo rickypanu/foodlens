@@ -170,11 +170,24 @@ export default function AddMeal({ navigation }) {
     };
   }, [selectedComponents, oilLevel, sourceType]);
 
+  // --- Reset Helper ---
+  const resetForm = () => {
+    setStep(1); // Back to Step 1
+    setMealType("");
+    setSourceType("");
+    setOilLevel("medium");
+    setSelectedComponents([]); // Clear selected dishes
+    setSearchQuery("");
+    setSelectedCategory("all");
+    setDate(new Date()); // Optional: Reset date to today
+  };
+
   // Submit Handler
+// Submit Handler
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Construct payload exactly matching Python `Meal` model
+      // ... (aapka purana payload code same rahega) ...
       const payload = {
         email: userData?.email || "notfound@gmail.com",
         date: format(date, "yyyy-MM-dd"),
@@ -186,12 +199,11 @@ export default function AddMeal({ navigation }) {
           dish_name: c.dish_name,
           quantity: c.quantity,
           unit: c.unit,
-          nutrition: null, // Or calculate specific component nutrition
+          nutrition: null,
         })),
         nutrition: {
           calories_mean: nutritionTotals.calories,
           protein_mean: nutritionTotals.protein,
-          // fill rest with 0 or calc
           carbs_mean: nutritionTotals.carbs,
           fat_mean: nutritionTotals.fat,
           fiber_mean: nutritionTotals.fiber,
@@ -206,7 +218,17 @@ export default function AddMeal({ navigation }) {
 
       if (response.data.success) {
         Alert.alert("Success", "Meal logged successfully!", [
-          { text: "OK", onPress: () => navigation?.goBack() }, // Or reset state
+          { 
+            text: "Add More", 
+            onPress: () => resetForm() // Yahan sab kuch clear ho jayega aur Step 1 par aa jayega
+          },
+          { 
+            text: "Go Back", 
+            onPress: () => {
+              resetForm(); // Safety ke liye clear kar do
+              navigation?.goBack();
+            } 
+          }, 
         ]);
       }
     } catch (error) {
