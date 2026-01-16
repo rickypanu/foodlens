@@ -1,0 +1,16 @@
+export const CATEGORIES = [
+  { id: "all", label: "All" },
+  { id: "breads_indian", label: "Breads" },
+  { id: "rice_grains", label: "Rice" },
+  { id: "dal_legumes", label: "Dal" },
+  { id: "veg_dishes", label: "Veg" },
+  { id: "paneer_dairy", label: "Paneer/Dairy" },
+  { id: "nonveg_dishes", label: "Non-Veg" },
+  { id: "breakfast_items", label: "Breakfast" },
+  { id: "fruits", label: "Fruits" },
+  { id: "snacks_street", label: "Snacks" },
+  { id: "sweets_desserts", label: "Desserts" },
+  { id: "beverages", label: "Beverages" },
+  { id: "packaged", label: "Packaged" },
+  { id: "sides_addons", label: "Addons" },
+];
