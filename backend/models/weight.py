@@ -1,12 +1,10 @@
 from pydantic import BaseModel
 from typing import List
-from datetime import date
 
-# This matches the body you are sending from React Native
 class WeightEntry(BaseModel):
-    user_id: str
+    email: str  # Changed from user_id to email as requested
     weight: float
-    date: date  # Pydantic will automatically parse "YYYY-MM-DD" strings
+    date: str   # Format YYYY-MM-DD
 
 class WeightHistoryResponse(BaseModel):
-    history: List[WeightEntry]
+    history: List[dict]

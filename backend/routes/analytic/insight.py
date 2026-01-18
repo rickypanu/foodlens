@@ -1,53 +1,47 @@
-from fastapi import APIRouter, HTTPException
-from models.weight import WeightEntry, WeightHistoryResponse
-from database import db 
+from fastapi import APIRouter, HTTPException, Body
+from models.weight import WeightEntry
+from database import weight_collection
 from datetime import datetime
-
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users", tags=["Insight"])
 
 @router.post("/add_weight")
 async def add_weight(entry: WeightEntry):
-    """
-    Receives: { user_id, weight, date }
-    Logic: Checks if a document with this 'user_id' AND 'date' exists.
-           - If YES: Overwrite it.
-           - If NO: Create a new one.
-    """
-    
-    # 1. Ensure date is a string (YYYY-MM-DD) for consistent querying
-    date_str = entry.date.strftime("%Y-%m-%d")
+    try:
+        # LOGIC: Find document with matching Email AND Date
+        # If found -> Update weight ($set)
+        # If not found -> Insert new document (upsert=True)
+        
+        result = await weight_collection.update_one(
+            {
+                "email": entry.email, 
+                "date": entry.date
+            },
+            {
+                "$set": {
+                    "weight": entry.weight,
+                    "email": entry.email,
+                    "date": entry.date,
+                    "timestamp": datetime.now() # Optional: for sorting by exact time if needed
+                }
+            },
+            upsert=True
+        )
 
-    # 2. Define the filter: Unique combo of User + Date
-    filter_query = {
-        "user_id": entry.user_id, 
-        "date": date_str
-    }
-    
-    # 3. Define the data to save
-    update_data = {
-        "$set": {
-            "weight": entry.weight,
-            "date": date_str,
-            "user_id": entry.user_id
-        }
-    }
+        if result.upserted_id:
+            return {"message": "New weight entry created", "type": "created"}
+        else:
+            return {"message": "Weight updated for today", "type": "updated"}
 
-    # 4. Perform the UPSERT (Update or Insert)
-    await db.weights.update_one(filter_query, update_data, upsert=True)
-    
-    return {"message": "Weight saved successfully", "date": date_str}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/weight_history/{user_id}", response_model=WeightHistoryResponse)
-async def get_weight_history(user_id: str, days: int = 30):
-    """
-    Fetch the last 30 days of weight data for the graph.
-    Sorts by date ascending so the graph flows left-to-right.
-    """
-    cursor = db.weights.find(
-        {"user_id": user_id}
-    ).sort("date", 1).limit(days)
+# Optional: Endpoint to get history for the graph
+@router.get("/weight_history/{email}")
+async def get_weight_history(email: str):
+    cursor = weight_collection.find({"email": email}).sort("date", 1).limit(30) # Last 30 entries
+    weights = await cursor.to_list(length=30)
     
-    history = await cursor.to_list(length=days)
+    # Clean data for frontend (convert ObjectId to str if needed, though strictly not needed for graph)
+    cleaned_weights = [{"date": w["date"], "weight": w["weight"]} for w in weights]
     
-    return {"history": history}
+    return {"history": cleaned_weights}
