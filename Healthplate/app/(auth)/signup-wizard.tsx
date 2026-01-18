@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   SafeAreaView,
   KeyboardTypeOptions,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -59,8 +61,8 @@ interface SignupFormData {
   goal: string;
   dietary_type: string;
   food_preferences: string[];
-  allergies: string[]; // Changed to Array
-  disliked_food: string[]; // Changed to Array
+  allergies: string[];
+  disliked_food: string[];
   cuisines: string[];
   health_concerns: string[];
 }
@@ -83,11 +85,42 @@ export default function SignupWizard() {
     goal: "",
     dietary_type: "",
     food_preferences: [],
-    allergies: [], // Initialize as empty array
-    disliked_food: [], // Initialize as empty array
+    allergies: [],
+    disliked_food: [],
     cuisines: [],
     health_concerns: [],
   });
+
+  // --- Validation Logic ---
+  const isStepValid = () => {
+    switch (step) {
+      case 1: // Credentials
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return (
+          emailRegex.test(form.email) &&
+          form.password.length >= 6 &&
+          form.password === form.confirmPassword
+        );
+      case 2: // Name
+        return form.name.trim().length > 0;
+      case 3: // Stats
+        return (
+          form.age.trim().length > 0 &&
+          form.height.trim().length > 0 &&
+          form.weight.trim().length > 0
+        );
+      case 4: // Activity & Goal
+        return form.activity_level !== "" && form.goal !== "";
+      case 5: // Diet
+        return form.dietary_type !== "";
+      case 6: // Preferences (Optional)
+        return true;
+      case 7: // Health (Optional)
+        return true;
+      default:
+        return false;
+    }
+  };
 
   // Helper for Text Inputs
   const update = (key: keyof SignupFormData, value: any) => {
@@ -110,10 +143,7 @@ export default function SignupWizard() {
   };
 
   const handleNext = () => {
-    if (step === 1 && form.password !== form.confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
+    if (!isStepValid()) return; // Double check
     if (step < 7) setStep(step + 1);
   };
 
@@ -123,9 +153,10 @@ export default function SignupWizard() {
   };
 
   const handleSubmit = async () => {
+    if (!isStepValid()) return;
+
     setLoading(true);
     try {
-      // Prepare payload
       const payload = {
         email: form.email,
         password: form.password,
@@ -138,7 +169,6 @@ export default function SignupWizard() {
         dietary_type: form.dietary_type,
         cuisines: form.cuisines,
         health_concerns: form.health_concerns,
-        // Send arrays directly
         allergies: form.allergies,
         disliked_food: form.disliked_food,
       };
@@ -249,7 +279,6 @@ export default function SignupWizard() {
     );
   };
 
-  // Helper for Chips Section
   const renderChipSection = (
     title: string,
     options: string[],
@@ -282,329 +311,358 @@ export default function SignupWizard() {
     </View>
   );
 
+  const canProceed = isStepValid();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
+        
         <Text style={styles.headerTitle}>Step {step} of 7</Text>
-        <View style={{ width: 24 }} />
+        
+        {/* Login Link */}
+        <TouchableOpacity onPress={() => router.push("/login")}>
+          <Text style={styles.loginLink}>Log In</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* STEP 1: Credentials */}
-        {step === 1 && (
-          <View>
-            <Text style={styles.title}>Create Account</Text>
-            {renderInputWithIcon(
-              "Email",
-              form.email,
-              "email",
-              "mail-outline",
-              "Enter your email",
-              "email-address"
-            )}
-            {renderInputWithIcon(
-              "Password",
-              form.password,
-              "password",
-              "lock-closed-outline",
-              "Min 6 characters",
-              "default",
-              true
-            )}
-            {renderInputWithIcon(
-              "Confirm Password",
-              form.confirmPassword,
-              "confirmPassword",
-              "lock-closed-outline",
-              "Re-enter password",
-              "default",
-              true
-            )}
-          </View>
-        )}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* STEP 1: Credentials */}
+          {step === 1 && (
+            <View>
+              <Text style={styles.title}>Create Account</Text>
+              {renderInputWithIcon(
+                "Email",
+                form.email,
+                "email",
+                "mail-outline",
+                "Enter your email",
+                "email-address"
+              )}
+              {renderInputWithIcon(
+                "Password",
+                form.password,
+                "password",
+                "lock-closed-outline",
+                "Min 6 characters",
+                "default",
+                true
+              )}
+              {renderInputWithIcon(
+                "Confirm Password",
+                form.confirmPassword,
+                "confirmPassword",
+                "lock-closed-outline",
+                "Re-enter password",
+                "default",
+                true
+              )}
+            </View>
+          )}
 
-        {/* STEP 2: Name */}
-        {step === 2 && (
-          <View>
-            <Text style={styles.title}>What's your name?</Text>
-            <Text style={styles.subtitle}>Let'spersonalize your experience</Text>
-            {renderInputWithIcon(
-              "Full Name",
-              form.name,
-              "name",
-              "person-outline",
-              "Enter your name"
-            )}
-          </View>
-        )}
+          {/* STEP 2: Name */}
+          {step === 2 && (
+            <View>
+              <Text style={styles.title}>What's your name?</Text>
+              <Text style={styles.subtitle}>
+                Let's personalize your experience
+              </Text>
+              {renderInputWithIcon(
+                "Full Name",
+                form.name,
+                "name",
+                "person-outline",
+                "Enter your name"
+              )}
+            </View>
+          )}
 
-        {/* STEP 3: Body Stats */}
-        {step === 3 && (
-          <View>
-            <Text style={styles.title}>Body Stats</Text>
-            <Text style={styles.subtitle}>
-              We'll use these to calculate your goals
-            </Text>
-            {renderInputWithIcon(
-              "Age",
-              form.age,
-              "age",
-              "calendar-outline",
-              "e.g. 25",
-              "numeric"
-            )}
-            {renderInputWithIcon(
-              "Height (cm)",
-              form.height,
-              "height",
-              "resize-outline",
-              "e.g. 175",
-              "numeric"
-            )}
-            {renderInputWithIcon(
-              "Weight (kg)",
-              form.weight,
-              "weight",
-              "scale-outline",
-              "e.g. 70",
-              "numeric"
-            )}
-          </View>
-        )}
+          {/* STEP 3: Body Stats */}
+          {step === 3 && (
+            <View>
+              <Text style={styles.title}>Body Stats</Text>
+              <Text style={styles.subtitle}>
+                We'll use these to calculate your goals
+              </Text>
+              {renderInputWithIcon(
+                "Age",
+                form.age,
+                "age",
+                "calendar-outline",
+                "e.g. 25",
+                "numeric"
+              )}
+              {renderInputWithIcon(
+                "Height (cm)",
+                form.height,
+                "height",
+                "resize-outline",
+                "e.g. 175",
+                "numeric"
+              )}
+              {renderInputWithIcon(
+                "Weight (kg)",
+                form.weight,
+                "weight",
+                "scale-outline",
+                "e.g. 70",
+                "numeric"
+              )}
+            </View>
+          )}
 
-        {/* STEP 4: Activity & Goals */}
-        {step === 4 && (
-          <View>
-            <Text style={styles.title}>Activity & Goal</Text>
-            <Text style={styles.subtitle}>
-              Help us understand your lifestyle
-            </Text>
-            <Text style={styles.sectionHeader}>Activity Level</Text>
+          {/* STEP 4: Activity & Goals */}
+          {step === 4 && (
+            <View>
+              <Text style={styles.title}>Activity & Goal</Text>
+              <Text style={styles.subtitle}>
+                Help us understand your lifestyle
+              </Text>
+              <Text style={styles.sectionHeader}>Activity Level</Text>
 
-            {renderSelectionCard(
-              "Sedentary",
-              "Sedentary",
-              form.activity_level,
-              "activity_level",
-              "desktop-outline",
-              "Desk job, little exercise"
-            )}
-            {renderSelectionCard(
-              "Lightly Active",
-              "Light",
-              form.activity_level,
-              "activity_level",
-              "walk-outline",
-              "1-2 days/week exercise"
-            )}
-            {renderSelectionCard(
-              "Moderately Active",
-              "Moderate",
-              form.activity_level,
-              "activity_level",
-              "bicycle-outline",
-              "3-4 days/week exercise"
-            )}
-            {renderSelectionCard(
-              "Highly Active",
-              "High",
-              form.activity_level,
-              "activity_level",
-              "barbell-outline",
-              "Daily intense activity"
-            )}
+              {renderSelectionCard(
+                "Sedentary",
+                "Sedentary",
+                form.activity_level,
+                "activity_level",
+                "desktop-outline",
+                "Desk job, little exercise"
+              )}
+              {renderSelectionCard(
+                "Lightly Active",
+                "Light",
+                form.activity_level,
+                "activity_level",
+                "walk-outline",
+                "1-2 days/week exercise"
+              )}
+              {renderSelectionCard(
+                "Moderately Active",
+                "Moderate",
+                form.activity_level,
+                "activity_level",
+                "bicycle-outline",
+                "3-4 days/week exercise"
+              )}
+              {renderSelectionCard(
+                "Highly Active",
+                "High",
+                form.activity_level,
+                "activity_level",
+                "barbell-outline",
+                "Daily intense activity"
+              )}
 
-            <Text style={styles.sectionHeader}>Fitness Goal</Text>
-            {renderSelectionCard(
-              "Maintain Weight",
-              "maintain",
-              form.goal,
-              "goal",
-              "medkit-outline"
-            )}
-            {renderSelectionCard(
-              "Fat Loss",
-              "fat_loss",
-              form.goal,
-              "goal",
-              "trending-down-outline"
-            )}
-            {renderSelectionCard(
-              "Muscle Gain",
-              "muscle_gain",
-              form.goal,
-              "goal",
-              "fitness-outline"
-            )}
-            {renderSelectionCard(
-              "Improve Energy",
-              "energy",
-              form.goal,
-              "goal",
-              "flash-outline"
-            )}
-          </View>
-        )}
+              <Text style={styles.sectionHeader}>Fitness Goal</Text>
+              {renderSelectionCard(
+                "Maintain Weight",
+                "maintain",
+                form.goal,
+                "goal",
+                "medkit-outline"
+              )}
+              {renderSelectionCard(
+                "Fat Loss",
+                "fat_loss",
+                form.goal,
+                "goal",
+                "trending-down-outline"
+              )}
+              {renderSelectionCard(
+                "Muscle Gain",
+                "muscle_gain",
+                form.goal,
+                "goal",
+                "fitness-outline"
+              )}
+              {renderSelectionCard(
+                "Improve Energy",
+                "energy",
+                form.goal,
+                "goal",
+                "flash-outline"
+              )}
+            </View>
+          )}
 
-        {/* STEP 5: Dietary Type */}
-        {step === 5 && (
-          <View>
-            <Text style={styles.title}>Dietary Preference</Text>
-            <Text style={styles.subtitle}>What do you eat?</Text>
-            {renderSelectionCard(
-              "Vegetarian",
-              "Vegetarian",
-              form.dietary_type,
-              "dietary_type",
-              "leaf-outline"
-            )}
-            {renderSelectionCard(
-              "Eggetarian",
-              "Egg",
-              form.dietary_type,
-              "dietary_type",
-              "egg-outline"
-            )}
-            {renderSelectionCard(
-              "Non-Vegetarian",
-              "Non-Veg",
-              form.dietary_type,
-              "dietary_type",
-              "restaurant-outline"
-            )}
-            {renderSelectionCard(
-              "Vegan",
-              "Vegan",
-              form.dietary_type,
-              "dietary_type",
-              "nutrition-outline"
-            )}
-          </View>
-        )}
+          {/* STEP 5: Dietary Type */}
+          {step === 5 && (
+            <View>
+              <Text style={styles.title}>Dietary Preference</Text>
+              <Text style={styles.subtitle}>What do you eat?</Text>
+              {renderSelectionCard(
+                "Vegetarian",
+                "Vegetarian",
+                form.dietary_type,
+                "dietary_type",
+                "leaf-outline"
+              )}
+              {renderSelectionCard(
+                "Eggetarian",
+                "Egg",
+                form.dietary_type,
+                "dietary_type",
+                "egg-outline"
+              )}
+              {renderSelectionCard(
+                "Non-Vegetarian",
+                "Non-Veg",
+                form.dietary_type,
+                "dietary_type",
+                "restaurant-outline"
+              )}
+              {renderSelectionCard(
+                "Vegan",
+                "Vegan",
+                form.dietary_type,
+                "dietary_type",
+                "nutrition-outline"
+              )}
+            </View>
+          )}
 
-        {/* STEP 6: Food Preferences (UPDATED) */}
-        {step === 6 && (
-          <View>
-            <Text style={styles.title}>Food Preference</Text>
-            <Text style={styles.subtitle}>
-              Help us personalize your experience
-            </Text>
+          {/* STEP 6: Food Preferences */}
+          {step === 6 && (
+            <View>
+              <Text style={styles.title}>Food Preference</Text>
+              <Text style={styles.subtitle}>
+                Help us personalize your experience
+              </Text>
 
-            {/* 1. Allergies */}
-            {renderChipSection(
-              "Food Allergies (Optional)",
-              ALLERGY_OPTIONS,
-              form.allergies,
-              "allergies"
-            )}
+              {/* 1. Allergies */}
+              {renderChipSection(
+                "Food Allergies (Optional)",
+                ALLERGY_OPTIONS,
+                form.allergies,
+                "allergies"
+              )}
 
-            {/* 2. Dislikes */}
-            {renderChipSection(
-              "Foods You Dislike (Optional)",
-              DISLIKE_OPTIONS,
-              form.disliked_food,
-              "disliked_food"
-            )}
+              {/* 2. Dislikes */}
+              {renderChipSection(
+                "Foods You Dislike (Optional)",
+                DISLIKE_OPTIONS,
+                form.disliked_food,
+                "disliked_food"
+              )}
 
-            {/* 3. Cuisines */}
-            {renderChipSection(
-              "Preferred Cuisines(Optional)",
-              CUISINE_OPTIONS,
-              form.cuisines,
-              "cuisines"
-            )}
-          </View>
-        )}
+              {/* 3. Cuisines */}
+              {renderChipSection(
+                "Preferred Cuisines (Optional)",
+                CUISINE_OPTIONS,
+                form.cuisines,
+                "cuisines"
+              )}
+            </View>
+          )}
 
-        {/* STEP 7: Health & Terms */}
-        {step === 7 && (
-          <View>
-            <Text style={styles.title}>Health Concerns</Text>
-            <Text style={styles.subtitle}>Almost Done!</Text>
+          {/* STEP 7: Health & Terms */}
+          {step === 7 && (
+            <View>
+              <Text style={styles.title}>Health Concerns</Text>
+              <Text style={styles.subtitle}>Almost Done!</Text>
+              <Text style={styles.subtitle}>
+                Select any that apply (Optional)
+              </Text>
 
-            <Text style={styles.subtitle}>
-              Select any that apply (Optional)
-            </Text>
-
-            {[
-              "Diabetes",
-              "Hypertension (BP)",
-              "PCOS/PCOD",
-              "High Cholesterol",
-              "Thyroid Issues",
-              "Kidney Issue",
-              "None",
-            ].map((h) => (
-              <TouchableOpacity
-                key={h}
-                style={[
-                  styles.checkboxRow,
-                  form.health_concerns.includes(h) && styles.checkboxSelected,
-                ]}
-                onPress={() => toggleSelection("health_concerns", h)}
-              >
-                <Ionicons
-                  name={
-                    form.health_concerns.includes(h)
-                      ? "checkbox"
-                      : "square-outline"
-                  }
-                  size={24}
-                  color={form.health_concerns.includes(h) ? "#4CAF50" : "#ccc"}
-                />
-                <Text
+              {[
+                "Diabetes",
+                "Hypertension (BP)",
+                "PCOS/PCOD",
+                "High Cholesterol",
+                "Thyroid Issues",
+                "Kidney Issue",
+                "None",
+              ].map((h) => (
+                <TouchableOpacity
+                  key={h}
                   style={[
-                    styles.checkboxText,
-                    form.health_concerns.includes(h) && {
-                      fontWeight: "600",
-                      color: "#333",
-                    },
+                    styles.checkboxRow,
+                    form.health_concerns.includes(h) && styles.checkboxSelected,
                   ]}
+                  onPress={() => toggleSelection("health_concerns", h)}
                 >
-                  {h}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Ionicons
+                    name={
+                      form.health_concerns.includes(h)
+                        ? "checkbox"
+                        : "square-outline"
+                    }
+                    size={24}
+                    color={
+                      form.health_concerns.includes(h) ? "#4CAF50" : "#ccc"
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.checkboxText,
+                      form.health_concerns.includes(h) && {
+                        fontWeight: "600",
+                        color: "#333",
+                      },
+                    ]}
+                  >
+                    {h}
+                  </Text>
+                </TouchableOpacity>
+              ))}
 
-            <View style={styles.divider} />
-            <Text style={styles.disclaimerHeader}>Terms & Disclaimer</Text>
-            <View style={styles.disclaimerBox}>
-              <Text style={styles.disclaimerText}>
-                Healthplate provides nutrition tracking and insights for
-                informational purposes only. Not medical advice.
+              <View style={styles.divider} />
+              <Text style={styles.disclaimerHeader}>Terms & Disclaimer</Text>
+              <View style={styles.disclaimerBox}>
+                <Text style={styles.disclaimerText}>
+                  Healthplate provides nutrition tracking and insights for
+                  informational purposes only. Not medical advice.
+                </Text>
+              </View>
+              <Text style={styles.agreeText}>
+                By clicking Finish, you agree to these terms.
               </Text>
             </View>
-            <Text style={styles.agreeText}>
-              By clicking Finish, you agree to these terms.
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+          )}
 
-      {/* Footer Navigation */}
-      <View style={styles.footer}>
-        {step === 7 ? (
-          <TouchableOpacity
-            style={styles.submitBtn}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
+          {/* Footer Navigation */}
+          <View style={styles.footerContainer}>
+            {step === 7 ? (
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  !canProceed && styles.disabledBtn, // Apply disabled style
+                ]}
+                onPress={handleSubmit}
+                disabled={loading || !canProceed} // Disable interaction
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Finish & Save</Text>
+                )}
+              </TouchableOpacity>
             ) : (
-              <Text style={styles.submitBtnText}>Finish & Save</Text>
+              <TouchableOpacity
+                style={[
+                  styles.nextBtn,
+                  !canProceed && styles.disabledBtn, // Apply disabled style
+                ]}
+                onPress={handleNext}
+                disabled={!canProceed} // Disable interaction
+              >
+                <Text style={styles.nextBtnText}>Next Step</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-            <Text style={styles.nextBtnText}>Next Step</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </TouchableOpacity>
-        )}
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -620,7 +678,15 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f0f0f0",
   },
   headerTitle: { fontSize: 16, fontWeight: "600", color: "#666" },
-  content: { padding: 20, paddingBottom: 100 },
+  loginLink: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#10B981", // Brand Green
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 40,
+  },
   title: {
     fontSize: 28,
     fontWeight: "bold",
@@ -734,15 +800,9 @@ const styles = StyleSheet.create({
   },
 
   // Footer
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+  footerContainer: {
+    marginTop: 30, // Spacing between last input and button
+    marginBottom: 20, // Spacing at the very bottom
   },
   nextBtn: {
     backgroundColor: "#111827",
@@ -766,4 +826,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   submitBtnText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  disabledBtn: {
+    backgroundColor: "#D1D5DB", // Gray color
+    shadowOpacity: 0, // Remove shadow
+    elevation: 0,
+  },
 });
