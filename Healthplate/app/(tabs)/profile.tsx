@@ -14,7 +14,7 @@ import {
 import { useAuth } from "../../src/context/AuthContext";
 import { api } from "../../src/services/api";
 import CustomHeader from "../../src/components/header";
-
+import PremiumPlanScreen from "@/src/components/PremiumPlanScreen";
 // --- CONFIGURATION ---
 const THEME_COLOR = "#10B981"; // Emerald 500
 const BG_COLOR = "#F3F4F6";
@@ -381,6 +381,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <PremiumPlanScreen />
         {/* 4. Health Metrics */}
         {data.metrics && Object.keys(data.metrics).length > 0 && (
           <View style={styles.card}>
