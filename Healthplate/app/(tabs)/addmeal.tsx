@@ -30,7 +30,10 @@ import {
   X,
   Info,
   ChevronRight,
+  Router,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
 import { api } from "@/src/services/api";
 import { useAuth } from "@/src/context/AuthContext";
@@ -43,11 +46,13 @@ import { SOURCE_TYPES } from "@/src/data/meals/sourceTypes";
 import { OIL_LEVELS } from "@/src/data/meals/oilLevels";
 
 export default function AddMeal({ navigation }) {
+  const router = useRouter();
   // Assuming React Navigation is used
   // --- State ---
   const { userData } = useAuth();
   const [step, setStep] = useState(1);
   const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [mealType, setMealType] = useState("");
   const [sourceType, setSourceType] = useState("");
   const [oilLevel, setOilLevel] = useState("medium");
@@ -74,16 +79,38 @@ export default function AddMeal({ navigation }) {
     });
   }, [dishes, searchQuery, selectedCategory]);
 
+  // Handle Calendar Selection
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+
+    // Android mein date select karte hi picker band karna hota hai
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+
+    if (event.type === "set" || Platform.OS === "ios") {
+      setDate(currentDate);
+    }
+  };
+
+  // Handle Quick Arrows (Previous/Next Day)
+  const shiftDate = (days) => {
+    const newDate = new Date(date);
+    newDate.setDate(date.getDate() + days);
+    setDate(newDate);
+  };
   // Component Management
- // Component Management
   const updateQuantity = (dish, delta) => {
     setSelectedComponents((prev) => {
       const existing = prev.find((c) => c.dish_id === dish.id);
 
       // DEBUG: Check if data exists
       if (delta > 0 && !existing) {
-         console.log(`Adding ${dish.name}: Carbs=${dish.carbs}, Fat=${dish.fat}, Sodium=${dish.sodium}`);
-         if (dish.carbs === undefined) console.warn("⚠️ MACRO DATA MISSING IN DISHES.JS FILE");
+        console.log(
+          `Adding ${dish.name}: Carbs=${dish.carbs}, Fat=${dish.fat}, Sodium=${dish.sodium}`
+        );
+        if (dish.carbs === undefined)
+          console.warn("⚠️ MACRO DATA MISSING IN DISHES.JS FILE");
       }
 
       if (existing) {
@@ -183,7 +210,7 @@ export default function AddMeal({ navigation }) {
   };
 
   // Submit Handler
-// Submit Handler
+  // Submit Handler
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -218,17 +245,18 @@ export default function AddMeal({ navigation }) {
 
       if (response.data.success) {
         Alert.alert("Success", "Meal logged successfully!", [
-          { 
-            text: "Add More", 
-            onPress: () => resetForm() // Yahan sab kuch clear ho jayega aur Step 1 par aa jayega
+          {
+            text: "Add More",
+            onPress: () => resetForm(), // Yahan sab kuch clear ho jayega aur Step 1 par aa jayega
           },
-          { 
-            text: "Go Back", 
+          {
+            text: "Back to Home",
             onPress: () => {
               resetForm(); // Safety ke liye clear kar do
-              navigation?.goBack();
-            } 
-          }, 
+              router.replace("/");
+              // navigation?.goBack();
+            },
+          },
         ]);
       }
     } catch (error) {
@@ -285,13 +313,56 @@ export default function AddMeal({ navigation }) {
           {step === 1 && (
             <View>
               <Text style={styles.sectionTitle}>When did you eat?</Text>
-
-              <View style={styles.dateDisplay}>
-                <Text style={styles.dateText}>
-                  {format(date, "EEEE, MMM d, yyyy")}
-                </Text>
+              {/* --- UPDATED DATE UI (No Icons) --- */}
+              <View style={styles.dateControlContainer}>
+                {/* CLICKABLE DATE TEXT ONLY */}
+                <TouchableOpacity
+                  style={styles.dateDisplay}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.dateLabel}>Date Selected</Text>
+                  <Text style={styles.dateText}>
+                    {format(date, "EEEE, MMM d, yyyy")}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
+              {/* --- CALENDAR COMPONENT --- */}
+              {/* Ye tabhi dikhega jab showDatePicker true hoga */}
+              {showDatePicker && (
+                <DateTimePicker
+                  testID="dateTimePicker"
+                  value={date}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"} // Android pe Calendar popup aayega
+                  onChange={onDateChange}
+                  maximumDate={new Date()} // Future dates disable karne ke liye (Optional)
+                />
+              )}
+
+              {/* iOS par "Done" button chahiye hota hai picker close karne ke liye */}
+              {Platform.OS === "ios" && showDatePicker && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: "#10b981",
+                      padding: 8,
+                      borderRadius: 8,
+                    }}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={{ color: "white", fontWeight: "bold" }}>
+                      Confirm Date
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <Text style={styles.label}>Meal Type</Text>
               <View style={styles.grid}>
                 {MEAL_TYPES.map((type) => {
@@ -689,6 +760,38 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#111827" },
   headerSubtitle: { fontSize: 12, color: "#6b7280" },
+  dateControlContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  arrowBtn: {
+    padding: 10,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 8,
+  },
+  dateDisplay: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1, // Beech mein space lene ke liye
+  },
+  dateLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#111827",
+  },
   progressContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,

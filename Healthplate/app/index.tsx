@@ -78,9 +78,9 @@ useEffect(() => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
   logoImage: {
     width: 120,
@@ -89,36 +89,36 @@ const styles = StyleSheet.create({
   },
   logoText: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#000000ff',
+    fontWeight: "bold",
+    color: "#000000ff",
   },
   featuresContainer: {
-    width: '100%',
+    width: "100%",
     gap: 16, // Adds space between rows
   },
   featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     // Shadow for iOS
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     // Elevation for Android
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: "#f3f4f6",
   },
   iconBox: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#ecfdf5', // Light emerald background
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#ecfdf5", // Light emerald background
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   textColumn: {
@@ -126,12 +126,13 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 10,
   },
   featureDesc: {
+    marginTop: 10,
     fontSize: 13,
-    color: '#6b7280',
+    color: "#6b7280",
   },
 });

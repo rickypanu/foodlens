@@ -37,9 +37,10 @@ async def get_daily_summary(email: str):
                 # using "calories_mean" as per your JSON
                 "total_calories": {"$sum": "$nutrition.calories_mean"},
                 "total_protein": {"$sum": "$nutrition.protein_mean"},
+                "total_fat":{"$sum": "$nutrition.fat_mean"},
                 "total_fiber": {"$sum": "$nutrition.fiber_mean"},
                 "total_sodium": {"$sum": "$nutrition.sodium_mean"},
-                "total_sugar": {"$sum": "$nutrition.sugar_mean"} 
+                "total_sugar": {"$sum": "$nutrition.sugar_mean"}
             }
         }
     ]
@@ -49,7 +50,7 @@ async def get_daily_summary(email: str):
     
     # Default values if no food found today
     totals = result[0] if result else {
-        "total_calories": 0, "total_protein": 0, 
+        "total_calories": 0, "total_protein": 0, "total_fat": 0, 
         "total_fiber": 0, "total_sodium": 0, "total_sugar": 0
     }
 
@@ -83,6 +84,8 @@ async def get_daily_summary(email: str):
         "data": {
             "calories": totals["total_calories"],
             "protein": totals["total_protein"],
+            "fat": totals["total_fat"],
+            "sugar": totals["total_sugar"],
             "fiber": totals["total_fiber"],
             "sodium": totals["total_sodium"],
             "sugar": totals["total_sugar"]

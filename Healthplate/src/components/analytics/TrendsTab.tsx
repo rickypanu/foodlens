@@ -1,61 +1,67 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LineChart, BarChart } from "react-native-gifted-charts";
+import { View, Text, StyleSheet } from 'react-native';
+import { TrendingUp, Construction } from "lucide-react-native";
 
-const screenWidth = Dimensions.get('window').width;
-
-export default function TrendsTab({ dailyData }) {
+export default function TrendsTab() {
   return (
-    <View style={styles.sectionContainer}>
-      <View style={styles.card}>
-        <Text style={styles.chartTitle}>Calorie History</Text>
-        <LineChart
-          data={dailyData.map(d => ({ value: d.calories, label: d.date.slice(5) }))}
-          color="#f97316"
-          thickness={3}
-          startFillColor="rgba(249, 115, 22, 0.2)"
-          endFillColor="rgba(249, 115, 22, 0.01)"
-          startOpacity={0.9}
-          endOpacity={0.1}
-          areaChart
-          curved
-          hideRules
-          hideYAxisText
-          height={180}
-          width={screenWidth - 80}
-          spacing={40}
-          initialSpacing={10}
-        />
+    <View style={styles.container}>
+      <View style={styles.iconContainer}>
+        <TrendingUp size={64} color="#cbd5e1" />
       </View>
-
-      <View style={styles.card}>
-        <Text style={styles.chartTitle}>Macro Distribution (Avg)</Text>
-        <BarChart
-          data={dailyData.map(d => ({ 
-            value: d.protein, 
-            label: d.date.slice(8),
-            frontColor: '#ef4444' 
-          }))}
-          barWidth={12}
-          spacing={20}
-          roundedTop
-          hideRules
-          xAxisThickness={0}
-          yAxisThickness={0}
-          hideYAxisText
-          height={150}
-          width={screenWidth - 80}
-          labelTextStyle={{fontSize: 10, color: '#94a3b8'}}
-        />
-        <Text style={styles.chartLegend}>Daily Protein Intake (g)</Text>
+      
+      <Text style={styles.title}>Insights Coming Soon</Text>
+      
+      <Text style={styles.subtitle}>
+        We are building advanced analytics to help you visualize your calorie history and macro trends.
+      </Text>
+      
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>IN DEVELOPMENT</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: { paddingHorizontal: 24, gap: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, borderWidth: 1, borderColor: '#f1f5f9', marginBottom: 12 },
-  chartTitle: { fontSize: 14, fontWeight: '600', color: '#64748b', marginBottom: 20 },
-  chartLegend: { textAlign: 'center', fontSize: 10, color: '#94a3b8', marginTop: 10 }
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  iconContainer: {
+    marginBottom: 24,
+    backgroundColor: '#f1f5f9',
+    padding: 24,
+    borderRadius: 100,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  badge: {
+    backgroundColor: '#fff7ed',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#f97316',
+    letterSpacing: 0.5,
+  },
 });

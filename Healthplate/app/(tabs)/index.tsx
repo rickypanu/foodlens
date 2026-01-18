@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +16,39 @@ import TodayMeal from "../homecomponent/todaymeal";
 import StreakCalendar from "../homecomponent/streak";
 import { useMotivation } from "@/src/hooks/useMotivation";
 
+// --- 1. NEW COMPONENT: SKELETON LOADER ---
+// This mimics your layout with gray boxes
+const DashboardSkeleton = () => {
+  return (
+    <View>
+      {/* Greeting & Date Skeleton */}
+      <View style={[styles.skeletonBox, { width: "60%", height: 32, marginBottom: 10 }]} />
+      <View style={[styles.skeletonBox, { width: "40%", height: 20, marginBottom: 20 }]} />
+
+      {/* Motivation Skeleton */}
+      <View style={[styles.skeletonBox, { width: "100%", height: 50, marginBottom: 16 }]} />
+
+      {/* Streak Skeleton */}
+      <View style={[styles.skeletonBox, { width: "100%", height: 110, marginBottom: 20 }]} />
+
+      {/* Calories & Meals Row Skeleton */}
+      <View style={styles.statsRow}>
+        <View style={[styles.skeletonBox, { width: "48%", height: 140 }]} />
+        <View style={[styles.skeletonBox, { width: "48%", height: 140 }]} />
+      </View>
+
+      {/* Macros Row Skeleton */}
+      <View style={[styles.statsRow, { marginTop: 16 }]}>
+        <View style={[styles.skeletonBox, { width: "48%", height: 80 }]} />
+        <View style={[styles.skeletonBox, { width: "48%", height: 80 }]} />
+      </View>
+      
+       {/* Meal List Skeleton */}
+       <View style={[styles.skeletonBox, { width: "100%", height: 80, marginTop: 20 }]} />
+    </View>
+  );
+};
+
 export default function HomeScreen() {
   const { userData } = useAuth();
   const router = useRouter();
@@ -24,11 +56,7 @@ export default function HomeScreen() {
   // --- STATE ---
   const [loading, setLoading] = useState(true);
   const [weekData, setWeekData] = useState([]);
-
-  // Store the full summary (targets + totals) from /daily-summary
   const [summary, setSummary] = useState(null);
-
-  // Store just the list of meals
   const [meals, setMeals] = useState([]);
 
   const today = new Date().toLocaleDateString("en-US", {
@@ -48,19 +76,14 @@ export default function HomeScreen() {
 
       const dateStr = new Date().toISOString().split("T")[0];
 
-      //
-      // We fetch 3 things in parallel:
-      // 1. Summary: For dynamic Targets (Profile) and Totals (Calories/Protein)
-      // 2. Stats/Meals: To get the actual list of food items for the list view
-      // 3. WeekData: For the streak calendar
       const [summaryRes, statsRes, weekRes] = await Promise.all([
-        api.get(`/daily-summary?email=${userEmail}`), // New Endpoint (Totals + Targets)
-        api.get(`/users/${userEmail}/daily-stats?date_str=${dateStr}`), // To get Meal List
-        api.get(`/users/${userEmail}/weekly-activity`), // Streak Data
+        api.get(`/daily-summary?email=${userEmail}`),
+        api.get(`/users/${userEmail}/daily-stats?date_str=${dateStr}`),
+        api.get(`/users/${userEmail}/weekly-activity`),
       ]);
 
-      setSummary(summaryRes.data); // Contains { data: {...}, profile: {...} }
-      setMeals(statsRes.data.meals || []); // Extract meals list
+      setSummary(summaryRes.data);
+      setMeals(statsRes.data.meals || []);
       setWeekData(weekRes.data);
     } catch (error) {
       console.log("Error fetching dashboard data:", error);
@@ -75,15 +98,11 @@ export default function HomeScreen() {
     }, [])
   );
 
-  // --- DELETE FUNCTION ---
   const handleDeleteMeal = async (mealId) => {
     try {
       const userEmail = userData?.email;
       if (!mealId || !userEmail) return;
-
       await api.delete(`/users/${userEmail}/meals/${mealId}`);
-
-      // Refresh data to update totals and remove item from list
       await fetchDashboardData();
       Alert.alert("Success", "Meal deleted successfully");
     } catch (error) {
@@ -92,43 +111,28 @@ export default function HomeScreen() {
     }
   };
 
-  // --- DYNAMIC CALCULATIONS ---
-  // Default values to prevent crash if data is loading
+  // --- CALCULATIONS ---
   const currentCalories = summary?.data?.calories || 0;
   const currentProtein = summary?.data?.protein || 0;
   const currentFat = summary?.data?.fat || 0;
-  // Recover the 'Daily Goal' from the low/high range or use a safe default
-  // Based on your backend logic: low = goal - 200. So Goal = low + 200.
   const calorieTarget = summary?.profile?.calorie_target_low
     ? summary.profile.calorie_target_low + 200
     : 2000;
-
   const proteinTarget = summary?.profile?.protein_target || 100;
   const fatTarget = summary?.profile?.fat_target || 70;
-
   const remainingCalories = Math.round(calorieTarget - currentCalories);
   const mealsCount = meals.length;
-
-  // Streak count is the number of days in a row that the user has been on track
-  // based on the current week's data.
   const streakCount = weekData?.current_streak || 0;
 
   const motivation = useMotivation(
-    {
-      total_calories: currentCalories,
-      total_protein: currentProtein,
-      meal_count: mealsCount,
-    },
-    {
-      calories: calorieTarget,
-      protein: proteinTarget,
-    },
+    { total_calories: currentCalories, total_protein: currentProtein, meal_count: mealsCount },
+    { calories: calorieTarget, protein: proteinTarget },
     streakCount
   );
 
   return (
     <ScrollView style={styles.container}>
-      {/* HEADER */}
+      {/* HEADER - Always Visible */}
       <View style={styles.header}>
         <Image
           source={require("../../assets/images/logo.png")}
@@ -141,29 +145,27 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      <Text style={styles.greeting}>Hey {userData?.name || "User"}! 👋</Text>
-      <Text style={styles.date}>{today}</Text>
-
-      <View style={styles.motivationCard}>
-        <Ionicons name="sparkles" size={18} color="#FFD700" />
-        <Text style={styles.motivationText}>{motivation}</Text>
-      </View>
-
-      {!loading && <StreakCalendar weekData={weekData} />}
-
+      {/* --- CONDITIONAL RENDERING --- */}
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#4CAF50"
-          style={{ marginTop: 20 }}
-        />
+        // 2. SHOW SKELETON IF LOADING
+        <DashboardSkeleton />
       ) : (
+        // SHOW REAL CONTENT IF LOADED
         <>
+          <Text style={styles.greeting}>Hey {userData?.name || "User"}! 👋</Text>
+          <Text style={styles.date}>{today}</Text>
+
+          <View style={styles.motivationCard}>
+            <Ionicons name="sparkles" size={18} color="#FFD700" />
+            <Text style={styles.motivationText}>{motivation}</Text>
+          </View>
+
+          <StreakCalendar weekData={weekData} />
+
           <View style={styles.statsRow}>
             {/* Calories Card */}
             <View style={styles.darkCard}>
               <Text style={styles.cardLabel}>Remaining</Text>
-              {/* Show different color if over budget */}
               <Text
                 style={[
                   styles.cardValue,
@@ -188,7 +190,7 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* --- MACROS ROW (Side-by-Side) --- */}
+          {/* --- MACROS ROW --- */}
           <View style={[styles.statsRow, { marginTop: 16 }]}>
             {/* Protein Card */}
             <View style={styles.halfMacroCard}>
@@ -250,6 +252,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", padding: 20, paddingTop: 0 },
+  
+  // --- NEW STYLE FOR SKELETON ---
+  skeletonBox: {
+    backgroundColor: "#F3F4F6", // Light Gray
+    borderRadius: 16,
+  },
+
   header: {
     alignItems: "center",
     justifyContent: "center",
@@ -292,19 +301,6 @@ const styles = StyleSheet.create({
   cardValue: { color: "#fff", fontSize: 32, fontWeight: "700" },
   cardValueDark: { fontSize: 32, fontWeight: "700", color: "#111827" },
   cardSub: { color: "#9CA3AF", marginTop: 4 },
-  proteinCard: {
-    backgroundColor: "#F9FAFB",
-    padding: 16,
-    borderRadius: 20,
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  macroCard: {
-    backgroundColor: "#F9FAFB",
-    padding: 16,
-    borderRadius: 20,
-    marginTop: 16,
-  },
   halfMacroCard: {
     backgroundColor: "#F9FAFB",
     width: "48%",

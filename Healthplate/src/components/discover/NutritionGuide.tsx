@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 export default function NutritionGuide() {
-  const [openIndex, setOpenIndex] = useState(0);
+  const [openIndex, setOpenIndex] = useState(null);
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Nutrient Encyclopedia</Text>

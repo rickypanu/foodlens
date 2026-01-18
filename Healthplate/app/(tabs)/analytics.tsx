@@ -41,7 +41,7 @@ const MOCK_PROFILE = {
 
 export default function AnalyticsHistory() {
   const [activeTab, setActiveTab] = useState("today");
-  const [range, setRange] = useState("30d");
+  const [range, setRange] = useState("total ");
 
   // Local State
   const [profile, setProfile] = useState(null);
@@ -169,11 +169,11 @@ export default function AnalyticsHistory() {
             <Text style={styles.headerTitle}>Progress Dashboard</Text>
             <Text style={styles.headerSubtitle}>Track your health journey with detailed analytics</Text>
           </View>
-          <TouchableOpacity style={styles.rangeButton}>
+          {/* <TouchableOpacity style={styles.rangeButton}>
             <CalendarIcon size={14} color="#64748b" />
             <Text style={styles.rangeText}>{range}</Text>
             <ChevronDown size={14} color="#64748b" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Tab Selector */}
