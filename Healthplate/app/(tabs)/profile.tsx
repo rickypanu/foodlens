@@ -40,11 +40,12 @@ const GENDER_OPTIONS = {
 };
 
 const GOAL_OPTIONS = {
-  0: "Sedentary 🛋️",
-  1: "Lightly Active 🚶",
-  2: "Moderately Active 🏃",
-  3: "Highly Active 🏋️",
+  0: "Maintain Weight ⚖️",
+  1: "Fat Loss 🔥",
+  2: "Muscle Gain 💪",
+  3: "Improve Energy ⚡",
 };
+
 
 // --- HELPER COMPONENTS (Moved Outside to fix Focus Bug) ---
 
@@ -258,6 +259,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F3F4F6" }}>
+      
       <CustomHeader />
 
       <ScrollView
@@ -381,7 +383,8 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <PremiumPlanScreen />
+        {/* <PremiumPlanScreen /> */}
+
         {/* 4. Health Metrics */}
         {data.metrics && Object.keys(data.metrics).length > 0 && (
           <View style={styles.card}>
@@ -538,8 +541,8 @@ export default function ProfileScreen() {
               <Text style={styles.sectionTitle}>Profile Privacy</Text>
               <Text style={styles.helperText}>
                 {data.is_private
-                  ? "Only you can see this."
-                  : "Visible to everyone."}
+                  ? "Only you can see your post."
+                  : "Your Post is visible to everyone."}
               </Text>
             </View>
             {isEditing ? (
