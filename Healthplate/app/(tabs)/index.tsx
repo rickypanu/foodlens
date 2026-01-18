@@ -188,56 +188,54 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Protein Progress Card */}
-          <View style={styles.proteinCard}>
-            <View
-              style={{ flexDirection: "row", justifyContent: "space-between" }}
-            >
-              <Text style={styles.cardLabel}>Protein</Text>
-              <Text style={styles.cardValueDark}>
-                {Math.round(currentProtein)}g / {Math.round(proteinTarget)}g
+          {/* --- MACROS ROW (Side-by-Side) --- */}
+          <View style={[styles.statsRow, { marginTop: 16 }]}>
+            {/* Protein Card */}
+            <View style={styles.halfMacroCard}>
+              <Text style={styles.macroLabel}>Protein</Text>
+              <Text style={styles.macroValue}>
+                {Math.round(currentProtein)}
+                <Text style={styles.macroUnit}>
+                  /{Math.round(proteinTarget)}g
+                </Text>
               </Text>
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      backgroundColor: "#4CAF50",
+                      width: `${Math.min(
+                        (currentProtein / proteinTarget) * 100,
+                        100
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
             </View>
-            <View
-              style={{
-                height: 6,
-                backgroundColor: "#E5E7EB",
-                borderRadius: 3,
-                marginTop: 10,
-              }}
-            >
-              <View
-                style={{
-                  height: 6,
-                  backgroundColor: "#4CAF50",
-                  borderRadius: 3,
-                  // Cap width at 100% so it doesn't overflow
-                  width: `${Math.min(
-                    (currentProtein / proteinTarget) * 100,
-                    100
-                  )}%`,
-                }}
-              />
-            </View>
-          </View>
-          {/* fat card */}
-          <View style={[styles.macroCard, { marginTop: 12 }]}>
-            <View
-              style={{ flexDirection: "row", justifyContent: "space-between" }}
-            >
-              <Text style={styles.cardLabel}>Fat</Text>
-              <Text style={styles.cardValueDark}>
-                {Math.round(currentFat)}g / {Math.round(fatTarget)}g
+
+            {/* Fat Card */}
+            <View style={styles.halfMacroCard}>
+              <Text style={styles.macroLabel}>Fat</Text>
+              <Text style={styles.macroValue}>
+                {Math.round(currentFat)}
+                <Text style={styles.macroUnit}>/{Math.round(fatTarget)}g</Text>
               </Text>
-            </View>
-            <View style={styles.progressBarBg}>
-              <View
-                style={{
-                  ...styles.progressBarFill,
-                  backgroundColor: "#F59E0B", // Amber/Yellow for Fat
-                  width: `${Math.min((currentFat / fatTarget) * 100, 100)}%`,
-                }}
-              />
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      backgroundColor: "#F59E0B",
+                      width: `${Math.min(
+                        (currentFat / fatTarget) * 100,
+                        100
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
             </View>
           </View>
 
@@ -307,14 +305,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginTop: 16,
   },
+  halfMacroCard: {
+    backgroundColor: "#F9FAFB",
+    width: "48%",
+    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  macroLabel: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  macroValue: { fontSize: 18, fontWeight: "700", color: "#111827" },
+  macroUnit: { fontSize: 12, color: "#9CA3AF", fontWeight: "400" },
   progressBarBg: {
-    height: 6,
+    height: 4,
     backgroundColor: "#E5E7EB",
-    borderRadius: 3,
-    marginTop: 10,
+    borderRadius: 2,
+    marginTop: 8,
   },
   progressBarFill: {
-    height: 6,
-    borderRadius: 3,
+    height: 4,
+    borderRadius: 2,
   },
 });
